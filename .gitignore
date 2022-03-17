@@ -1,0 +1,15 @@
+.Rproj.user
+.Rhistory
+.Rdata
+.httr-oauth
+.DS_Store
+*.shp
+*.cpg
+*.dbf
+*.prj
+*.sbn
+*.sbx
+*.shx
+*.tif
+*.xml
+*.ovr

@@ -1,0 +1,21 @@
+"Ship","Ship_code","Platform","Height_of_platform","Height_of_eye","Source"
+"Arrow Post","AP","Br",,,
+"Neocaligus","NEO","Br",,,
+"Neocaligus","NEO","FB",,,"FB=fly bridge"
+"Hawk Bay","HB","Br",,,
+"Hawk Bay","HB","FB",,,"FB=fly bridge"
+"John P Tully","TU","Br",11.100000000,12.800000000,"HOE = 1.7m to eye + HOP"
+"John P Tully","TU","Mo",13.800000000,15.500000000,"HOE = 1.7m to eye + HOP"
+"WE Ricker","RI","Br",9.140000000,10.840000000,
+"Vector","VE","Br",6.400000000,8.080000000,
+"Tanu","TA","Br",6.000000000,7.770000000,"HOE = 1.7m to eye + HOP"
+"Tanu","TA","Mo",8.600000000,10.300000000,"HOE = 1.7m to eye + HOP"
+"Gordon Reid","GR","Br",8.200000000,9.900000000,
+"Gordon Reid","GR","Mo",10.200000000,11.900000000,
+"Curve of Time","CT",,,,
+"Acheiver","ACH","Platform",,5.000000000,"Williams & Thomas 2007"
+"Manyberries", "MB", "Bo",1.25,1.6,"HOE = 1.6m to eye + HOP"
+"Manyberries", "MB", "Br",1.25,1.6,"HOE = 1.6m to eye + HOP"
+"Roller Bay", "RB", "RBbridge",,,
+"Roller Bay", "RB", "RBFly_sit",2.74,3.60,"FB=fly bridge"
+"Roller Bay", "RB", "RBFly_stand",2.74,4.34,"FB=fly bridge"

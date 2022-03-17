@@ -1,0 +1,72 @@
+Package: cemore
+Title: Analysis of DFO CRP CeMoRe Survey Data
+Version: 0.0.0.9000
+Authors@R: 
+    person(given = "Elise",
+           family = "Keppel",
+           role = c("aut", "cre"),
+           email = "elise.keppel@dfo-mpo.gc.ca")
+Description: Facilitates Analysis of DFO CRP CeMoRe Survey Data, including
+  processing data, formatting, summarizing, generating segments, plotting, etc.
+License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
+    license
+Depends:
+    R (>= 3.4.0),
+    Rcpp (>= 0.12.0)
+Imports:
+    beepr,
+    data.table,
+    plyr,
+    dplyr (>= 0.7.0),
+    ggnewscale,
+    ggplot2,
+    lubridate,
+    magrittr,
+    marmap,
+    PBSdata,
+    PBSmapping,
+    proj4,
+    purrr,
+    RColorBrewer,
+    raster,
+    rgdal,
+    rgeos,
+    sf,
+    sp,
+    tidyr,
+    maptools,
+    stringr
+Exports: beepr,
+    data.table,
+    plyr,
+    dplyr (>= 0.7.0),
+    ggnewscale,
+    ggplot2,
+    lubridate,
+    magrittr,
+    marmap,
+    PBSdata,
+    PBSmapping,
+    purrr,
+    RColorBrewer,
+    raster,
+    rgdal,
+    rgeos,
+    sf,
+    sp,
+    tidyr,
+    maptools,
+    stringr
+Suggests:
+    knitr,
+    rmarkdown,
+    testthat,
+    scales
+VignetteBuilder:
+    knitr
+Remotes:
+    github::pbs-software/pbs-data/PBSdata
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.1
