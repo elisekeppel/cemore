@@ -1156,12 +1156,12 @@ rownames(effort) <- c(1:nrow(effort))
 effort$dummy.stat.trans <- paste(effort$Status,effort$Transect.ID,sep="-")
 n <- rle(effort$dummy.stat.trans)$length #get number of records in each Status segment
 effort$SEQ_ID <- rep(c(1:length(n)),n)
+effort$SEQ_ID <- paste(surveyid,effort$Transect.ID,sep="_")
 effort$dummy.stat.trans <- NULL
 cat("DONE")
 
 #Add Final.Transect.ID field.
-# EK edit: not needed for cemore, so just rename field to keep consistent field names moving forward
-effort$Final.Transect.ID <- paste(effort$SurveyID,effort$Transect.ID,sep="_")
+effort$Final.Transect.ID <- paste(surveyid,effort$Transect.ID,sep="_")
 
 #Check to make sure no effort falls on land
 #---------------------------------------------------------

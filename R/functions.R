@@ -359,9 +359,9 @@ load_effort <- function(year, month, single_survey = T, vessel=NULL){
                               month %in% c(4:6) ~ "Spring",
                               month %in% c(7:9) ~ "Summer",
                               month %in% c(10:12)  ~ "Fall"
-                            ), levels = c("Winter", "Spring", "Summer", "Fall")),
-                            TransectID=paste(SurveyID, Final.T.ID, sep="_"),
-                            ONSEQ_ID = paste(SurveyID, ONSEQ_ID, sep ="_"))
+                            ), levels = c("Winter", "Spring", "Summer", "Fall"))) %>%
+    rename(TransectID=Final.T.ID)
+
   if(!is.null(vessel)) effort %<>% filter(Vessel == vessel)
 
   effort$month_abb[which(effort$month_abb == "Aug" & effort$year == 2020)] <- "Sep"
@@ -392,8 +392,7 @@ load_sightings <- function(year, month, single_survey = T, vessel=NULL){
     dplyr::transmute(SurveyID, Vessel=vessel,
                      year = lubridate::year(time_index), month = lubridate::month(time_index),
                      month_abb = factor(month.abb[month], levels = month.abb[1:12]),
-                     TransectID = paste(SurveyID,"t",Final_T_ID,sep="_"),
-                     Sgt_ID,
+                     Sgt_ID=paste(year,month,Sgt_ID,sep="-"),
                      SD_nm,
                      time_index,
                      Species = factor(Species, levels = c('Humpback Whale',
