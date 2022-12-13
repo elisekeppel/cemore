@@ -1,0 +1,6 @@
+"OBJECTID","Id","location","lat","lon","deployment_date","deployment_year","deployment_month","retrieval_date","address <- factor(c(79, 80, NA, 31, 78))","deployed"
+"1","0","2021_08a",48.3247739022,-123.33237109,"2021-08-21",2021,8,"2021-10-16","79","Acoustic Recorder"
+"2","0","2021_08b",48.3131199638,-123.36217247,"2021-08-21",2021,8,"2021-08-21","80","Acoustic Recorder"
+"4","0","2021_10_porlier",49.0216981788,-123.562279957,NA,NA,NA,NA,NA,"Acoustic Recorder"
+"8","0","2021_10_great_chain",48.388819883,-123.203829217,"2021-10-17",2021,10,"2021-11-20","31","Acoustic Recorder"
+"9","0","2021_10_parry_bay",48.3436826729,-123.43675535,"2021-10-16",2021,10,"2021-11-22","78","Acoustic Recorder"

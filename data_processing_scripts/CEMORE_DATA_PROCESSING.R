@@ -183,7 +183,7 @@ if(length(which(nn %ni% colnames(effort)))!=0){
   stop(paste("Column name(s) in EffortEnv.csv are missing or misspelled. We are looking for:", nn[which(nn %ni% colnames(effort))], sep = " "), call. = FALSE)
 }
 
-nn <- c("time_index", "time_local","GPS.Pos","Sgt.Id","Bearing","Reticles","Horizon_Certainty","Reticle.Instr","Distance..m.","Side","Obs","Species","Min.Cnt","Max.Cnt","Best.Cnt","Photos","Comments", "Incidental.Sighting","Bearing.Abs", "Sighting.Complete","Sgt.Dist..m.", "Sgt.Pos","Sgt.Lat","Sgt.Lon","Psd..m.", "QA.QC.Comments", "sighting_distance", "date")
+nn <- c("time_index", "time_local","GPS.Pos","Sgt.Id","Bearing","Reticles","Horizon_Certainty","Reticle.Instr","Distance..m.","Side","Obs","Species","Min.Cnt","Max.Cnt","Best.Cnt","Photos","Comments", "Incidental.Sighting","Bearing.Abs", "Sighting.Complete","Sgt.Dist..m.", "Sgt.Pos","Sgt.Lat","Sgt.Lon","Psd..m.", "QA.QC.Comments", "sighting_distance", "date", "Porpoise.Behaviour")
 if(length(which(nn %ni% colnames(sightings)))!=0){
   beep(10)
   stop(paste("Column name(s) in Sightings.csv are missing or misspelled. We are looking for:", toString(nn[which(nn %ni% colnames(sightings))]), sep = " "), call. = FALSE)
@@ -329,7 +329,7 @@ sightings %<>% mutate(Distance..nm. = Distance..m./1852,
                       Psd..nm. = Psd..m./1852) %>%
   dplyr::select(-c(Distance..m., Sgt.Dist..m., Psd..m.))
 
-sightings <- sightings[,c("time_index","time_local", "GPS.Pos","Sgt.Id","Bearing","Reticles","Horizon_Certainty","Reticle.Instr","Distance..nm.","Side","Obs","Species","Min.Cnt","Max.Cnt","Best.Cnt","Photos","Comments","Incidental.Sighting","Bearing.Abs","Sighting.Complete","Sgt.Dist..nm.","Sgt.Pos","Sgt.Lat", "Sgt.Lon","Psd..nm.", "QA.QC.Comments")]
+sightings <- sightings[,c("time_index","time_local", "GPS.Pos","Sgt.Id","Bearing","Reticles","Horizon_Certainty","Reticle.Instr","Distance..nm.","Side","Obs","Species","Min.Cnt","Max.Cnt","Best.Cnt","Photos","Comments","Incidental.Sighting","Bearing.Abs","Sighting.Complete","Sgt.Dist..nm.","Sgt.Pos","Sgt.Lat", "Sgt.Lon","Psd..nm.", "QA.QC.Comments", "Porpoise.Behaviour")]
 
 #Numeric variables
 nv <- c("Reticles","Distance..nm.","Min.Cnt","Max.Cnt","Best.Cnt","Bearing.Abs","Sgt.Dist..nm.","Sgt.Lat","Sgt.Lon","Psd..nm.")
@@ -345,7 +345,7 @@ for(j in index) {
 sightings[,index]<-lapply(index, function(x) as.numeric(as.character(sightings[,x])))
 
 #Character variables
-cv <- c("Sgt.Id","Bearing","Reticle.Instr","Side","Obs","Species")
+cv <- c("Sgt.Id","Bearing","Reticle.Instr","Side","Obs","Species", "Porpoise.Behaviour")
 index <- which(names(sightings) %in% cv)
 sightings[,index]<-lapply(index, function(x) as.character(sightings[,x]))
 #Date-time variables
@@ -400,7 +400,7 @@ if(sum(is.na(survey$Date_Start_GMT))==nrow(survey) | sum(is.na(survey$Date_End_G
 #----------------------------------------------------------------
 names(effort) <- c("time_index","time_local","Action","Status","Transect.ID","Platform","Port.Observer","Starboard.Observer","Effort_Instrument","DataRecorder","PORT.Visibility","Beaufort","STBD.Visibility","Swell","Glare","Left.Glare.Limit","Right.Glare.Limit","Cloud.Cover","Precipitation","Comments","Locked.from.Editing","QAQC_Comments","GPSIndex")
 names(gps) <- c("GpsTime.UTC","GpsTime","Latitude","Longitude","Speed","Heading","GPSIndex")
-names(sightings) <- c("time_index","time_local","GPS.Pos","Sgt.ID","Bearing","Reticle","Horizon_Certainty","Reticle.Instr","Distance","Side","SightedBy","Species","MinNumber","MaxNumber","BestNumber","Photos","Comments","Incidental.Sighting","MYST_Bearing.abs","Sighting.Complete","MYST_SgtDist.nm","MYST.Pos","MYST_Sgt.Lat","MYST_Sgt.Lon","MYST_PSD.nm","QAQC_Comments","GPSIndex","M.int")
+names(sightings) <- c("time_index","time_local","GPS.Pos","Sgt.ID","Bearing","Reticle","Horizon_Certainty","Reticle.Instr","Distance","Side","SightedBy","Species","MinNumber","MaxNumber","BestNumber","Photos","Comments","Incidental.Sighting","MYST_Bearing.abs","Sighting.Complete","MYST_SgtDist.nm","MYST.Pos","MYST_Sgt.Lat","MYST_Sgt.Lon","MYST_PSD.nm","QAQC_Comments", "Porpoise.Behaviour","GPSIndex","M.int")
 cat("DONE")
 
 #Store survey information
@@ -419,7 +419,7 @@ if(nrow(survey[which(survey$SurveyID %in% surveyid),])!=1){
   }
 }
 #Store the vessel code name for the survey #EK edit
-if(survey[which(survey$SurveyID %in% surveyid),]$Vessel_code %ni% c("MB", "RB", "VE")){
+if(survey[which(survey$SurveyID %in% surveyid),]$Vessel_code %ni% c("MB", "RB", "VE","TA")){
   ##beep(10)
   stop(paste("Oops! The vessel code assigned to", surveyid, "in the SurveyID table isn't recognized:" , vessel,"Please make sure that vessel code in the SurveyID table is correct and run this code again.", sep = " "), call. = FALSE)
 } else {
@@ -475,7 +475,7 @@ if(sum(DST$Year==year)!=1){
 
 # TO DO set up survey transect id column in survey txt file
 #If there is a survey design, the design, based on the vessel identifier, will be loaded.
-if(vessel %in% c("RB","MB","VE")) {
+if(vessel %in% c("RB","MB","VE","TA")) {
   # beep(10)
   # x <- readline(prompt = cat(paste("How many transects were completed in survey", surveyid, "?   [click here & type number of transects & hit Enter]    \n\n"), sep = " "))
   # transect.name.list.MASTER <- seq(1:x)
@@ -537,10 +537,12 @@ if(length(which(effort$Platform =="RBFly_sitting"))!=0){
 if(length(which(effort$Platform =="RBFly_standing"))!=0){
   effort[which(effort$Platform =="RBFly_standing"),]$Platform <- "RBFly_stand"
 }
-if(length(which(effort$Platform =="Fujinon_VecBridge"))!=0){
-  effort[which(effort$Platform =="Fujinon_VecBridge"),]$Platform <- "Br"
+if(length(which(effort$Platform %in% c("Fujinon_VecBridge","Fujinon_TanuBridge")))!=0){
+  effort[which(effort$Platform %in% c("Fujinon_VecBridge","Fujinon_TanuBridge")),]$Platform <- "Br"
 }
-
+if(length(which(effort$Platform %in% c("Fujinon_TanuMonkey")))!=0){
+  effort[which(effort$Platform %in% c("Fujinon_TanuMonkey")),]$Platform <- "Mo"
+}
 #Look in ship table and make sure that all platform entries match the vessel's design
 vessel.platforms <- sort(unique(ship[which(ship$Ship_code==vessel),]$Platform))
 if(length(vessel.platforms)==1){
@@ -632,8 +634,10 @@ if(sum(is.na(gps$Speed))!=0){
 ####################################################################
 #The sampling rate on the badelf was 1Hz, and random datapoints show erroneous speeds.  My solution is to delete these erroneous speeds, then impute the speed from the following record.  As speed is not used beyond the effort definition (and not even here), this has very little consequence on the data.  Exploring the data shows that 95% of data is between 9.5 and 10.3 knots, however to be conservative I choose 15Knots as the cut off.
 summary(gps$Speed)
-if(vessel == "MB" & max(gps$Speed) >27) stop("There are speeds which exceed 25 knots. Check data and fix if necessary.")
-if(vessel == "RB" & max(gps$Speed) >28) stop("There are speeds which exceed 25 knots. Check data and fix if necessary.")
+if(vessel == "MB" & max(gps$Speed) >27) stop("There are speeds which exceed 27 knots. Check data and fix if necessary.")
+if(vessel == "RB" & max(gps$Speed) >28) stop("There are speeds which exceed 28 knots. Check data and fix if necessary.")
+if(vessel == "TA" & max(gps$Speed) >20) stop("There are speeds which exceed 20 knots. Check data and fix if necessary.")
+if(vessel == "VE" & max(gps$Speed) >20) stop("There are speeds which exceed 20 knots. Check data and fix if necessary.")
 #
 # if(sum(which(gps$Speed>25))!=0){
 #   index=which(gps$Speed>25)
@@ -711,7 +715,7 @@ if(sum(is.na(sightings$Species))!=0){
 # to remove sightings missing required
 #sightings %<>% filter(Sgt.ID == toString(sightings[which(is.na(sightings$Species)),]$Sgt.ID))
 
-#Remove apostrophes from species names (as they disrupt text file interpretation)
+#Remove apostrophes from species names (as they disrupt text file interpretation) #EK edit: add back in after processing for Dall's
 if(length(grep("'",sightings$Species))!=0){
   sightings$Species <- gsub("'","",sightings$Species)
 }
@@ -825,8 +829,8 @@ if(nrow(sightings[which(sightings$Method %in% c("RBFly_stand")),])!=0){
 # unique(sightings$Platform)
 
 #Adjust Method entries so they will work with our pre-written functions ('Bi', 'BE', 'NE'):
-if(sum(sightings$Method %in% c("Fujinon_bridge", "Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_MBBridge", "Fujinon_RBbridge", "Fujinon_RBFly","Fujinon_VecBridge"))!=0){
-  sightings[which(sightings$Method %in% c("Fujinon_bridge","Fujinon_MBbow", "Fujinon_MBBow", "Fujinon_MBBridge", "Fujinon_RBbridge", "Fujinon_RBFly", "Fujinon_VecBridge")),]$Method <- "Bi"
+if(sum(sightings$Method %in% c("Fujinon_bridge", "Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_MBBridge", "Fujinon_RBbridge", "Fujinon_RBFly","Fujinon_VecBridge","Fujinon_TanuMonkey","Fujinon_TanuBridge"))!=0){
+  sightings[which(sightings$Method %in% c("Fujinon_bridge","Fujinon_MBbow", "Fujinon_MBBow", "Fujinon_MBBridge", "Fujinon_RBbridge", "Fujinon_RBFly", "Fujinon_VecBridge","Fujinon_TanuMonkey","Fujinon_TanuBridge")),]$Method <- "Bi"
 }
 
 
@@ -883,11 +887,11 @@ if(nrow(sightings[which(sightings$Incidental.Sighting==FALSE & is.na(sightings$S
       gc.maybe <- c(gc.maybe, sightings[issues[i],]$Sighting.)
     } else {
       if(sightings[issues[i],]$Side=="Port"){
-        port.effort <- effort[max(which(!is.na(effort$Port.Observer) & effort$time_index <= sightings[issues[i],]$Time.PDT)),]$Port.Observer
+        port.effort <- effort[max(which(!is.na(effort$Port.Observer) & effort$time_index <= sightings[issues[i],]$time_index)),]$Port.Observer
         sightings[issues[i],]$SightedBy <- port.effort
       }
       if(sightings[issues[i],]$Side=="Starboard"){
-        stbd.effort <- effort[max(which(!is.na(effort$Starboard.Observer) & effort$time_index <= sightings[issues[i],]$Time.PDT)),]$Starboard.Observer
+        stbd.effort <- effort[max(which(!is.na(effort$Starboard.Observer) & effort$time_index <= sightings[issues[i],]$time_index)),]$Starboard.Observer
         sightings[issues[i],]$SightedBy <- stbd.effort
       }
     }
@@ -992,6 +996,9 @@ rownames(effort) <- c(1:nrow(effort))
 cols <- c("Platform","Port.Observer","Starboard.Observer","Effort_Instrument","PORT.Visibility","Beaufort","STBD.Visibility")
 ind <- which(with(effort, c(FALSE, Status[-1L] != Status[-length(Status)]))) #each time Status switches
 
+# To include first effort entry correctly when the first effort entry of survey is ON EFFORT - as in June 2022
+if(effort$Status[1]=="ON") ind <- c(1,ind)
+
 #When Status is switching, Action should be 'Changing effort status':
 if(length(which(effort[ind,]$Action %in% c("Weather update","Observer rotation")))!=0){
   effort[ind[which(effort[ind,]$Action %in% c("Weather update","Observer rotation"))],]$Action <- "Changing effort status"
@@ -1013,6 +1020,7 @@ if(length(time.issues)!=0){
   beep(10)
   stop(paste("Oops! There are some effort entries that are entered more than 45 minutes after the previous entry*: Time_local (PDT) ", toString(time.issues)," Please investigate and correct this in the Effort table and re-run this code. *Only counting entries with Observers, Beaufort, Visib, Instrument and Platform filled in -- this means that a previous entry within 45 minutes of the flagged entry may simply be missing one of these attributes and the error can be reconciled by filling it in."), call. = FALSE)
 }
+
 cat("DONE")
 
 #Merge effort & gps tables
@@ -1043,15 +1051,22 @@ cat("\n\nFilling down survey conditions...")
 #Fill in conditions for ON effort only
 #Find row numbers of the start of all ON effort segments
 ind <- which(with(effort, c(FALSE, Status[-1L] != Status[-length(Status)]))) #each time Status switches
+
+# To include first effort entry correctly when the VERY first effort entry of survey is ON EFFORT - as in June 2022 when trackline wasn't logging for first hour or so
+if(effort$Status[1]=="ON") ind <- c(1,ind)
+
 on <- which(effort$Status=="ON") #all ON effort records
 ON.start <- on[which(on %in% ind)] #each time ON effort segment begins
 #Required conditions:
 #Conditions required for analysis -- these MUST be filled out for all ON-effort records
 #Speed is a required condition but has already been checked for completion
-req.conditions <- c("Platform","Transect.ID","Effort_Instrument","PORT.Visibility","Beaufort","STBD.Visibility","Swell","Glare","Cloud.Cover","Precipitation")
+req.conditions <- c("Platform","Transect.ID","Effort_Instrument","PORT.Visibility","Beaufort","STBD.Visibility","Swell","Glare","Left.Glare.Limit","Right.Glare.Limit","Cloud.Cover","Precipitation")
+# ADD IN ???
 #Find any ON-effort start records with at least one empty condition required for analysis
 #Fix missing effort data
 effort$Glare[ON.start] <- ifelse(is.na(effort$Glare[ON.start]), "None", effort$Glare[ON.start])
+effort$Left.Glare.Limit <- ifelse(effort$Glare=="None", "None", effort$Left.Glare.Limit)
+effort$Right.Glare.Limit <- ifelse(effort$Glare=="None", "None", effort$Right.Glare.Limit)
 effort$Precipitation[ON.start] <- ifelse(is.na(effort$Precipitation[ON.start]), "Clear", effort$Precipitation[ON.start])
 
 rec.bl <- which(as.data.frame(rowSums(is.na(effort[ON.start,paste(req.conditions)])))[,1] != 0)
@@ -1071,7 +1086,7 @@ if(length(rec.bl) != 0){
 effort[which(effort$Status=="ON"),paste(req.conditions)] <- lapply(effort[which(effort$Status=="ON"),paste(req.conditions)], fill)
 #Other conditions:
 #Pull down conditions within ON-effort segments
-conditions <- c("Port.Observer","Starboard.Observer","DataRecorder","Swell","Glare","Precipitation")
+conditions <- c("Port.Observer","Starboard.Observer","DataRecorder")
 
 #As not all initial values are necessarily filled in, we will use the fillNAgaps function and go segment by segment
 for(i in seq_along(ON.start)){ #loop through each segment
@@ -1153,15 +1168,22 @@ cat("\n\nCreating Sequence field...")
 effort <- effort[order(effort$GPSIndex),]
 rownames(effort) <- c(1:nrow(effort))
 #SEQ_ID will change every time Status and/or Transect ID changes
-effort$dummy.stat.trans <- paste(effort$Status,effort$Transect.ID,sep="-")
+# effort$dummy.stat.trans <- paste(effort$Status,effort$subTransect.ID,sep="-") EK edit
+effort$dummy.stat.trans <- paste(effort$Status,effort$subTransect.ID,sep="-")
 n <- rle(effort$dummy.stat.trans)$length #get number of records in each Status segment
 effort$SEQ_ID <- rep(c(1:length(n)),n)
-effort$SEQ_ID <- paste(surveyid,effort$Transect.ID,sep="_")
+effort$SEQ_ID <- paste(surveyid,effort$SEQ_ID,sep="_")
 effort$dummy.stat.trans <- NULL
+lev <- unique(effort$SEQ_ID)
+effort$SEQ_ID %<>% factor(levels = lev)
 cat("DONE")
 
 #Add Final.Transect.ID field.
-effort$Final.Transect.ID <- paste(surveyid,effort$Transect.ID,sep="_")
+effort %<>% arrange(GPSIndex) #year(GpsTime),month(GpsTime),day(GpsTime),Transect.ID
+effort$Final.Transect.ID <- NA
+effort[which(!is.na(effort$Transect.ID)),]$Final.Transect.ID <- paste(surveyid, effort[which(!is.na(effort$Transect.ID)),]$Transect.ID,sep="")
+lev <- unique(effort$Final.Transect.ID)
+effort$Final.Transect.ID %<>% factor(levels = lev)
 
 #Check to make sure no effort falls on land
 #---------------------------------------------------------
@@ -1216,6 +1238,8 @@ for(i in 1:nrow(sdf)){
     effort[nrow(effort),]$Final.Transect.ID <- effort[sdf[i,]$V3,]$Final.Transect.ID
   }
 }
+lev <- unique(effort$ONSEQ_ID)
+effort$ONSEQ_ID %<>% factor(levels = lev)
 
 #Sort effort table so that endpoint rows are stored in chronological order
 effort <- effort[order(effort$GpsTime.UTC,effort$ONSEQ_ID),]

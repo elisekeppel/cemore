@@ -144,7 +144,9 @@ if(surveyid == "cemore_2021jan"){
   data$effort[which(data$effort$time_index == "2021-01-20T16:18:21.6"),]$time_index <- "2021-01-20T16:17:15"
   data$effort[which(data$effort$time_index == "2021-01-22T13:45:32.1"),]$time_local <- "2021-01-22T13:45:08"
   data$effort[which(data$effort$time_index == "2021-01-22T13:45:32.1"),]$time_index <- "2021-01-22T13:45:08"
+  data$sightings[which(data$sightings$time_index == "2021-01-20 14:30:09"),]$Reticle <- 0.9
 }
+
 
 # EK edit temp fix for data with "-" in Bearing column. Fixed in my data processing code
 # if(surveyid == "cemore_feb_2021"){
@@ -178,6 +180,8 @@ if(year == 2021 & tolower(month_abb) == "jun"){
   data$sightings[which(data$sightings$time_index == "2021-06-07 10:51:08"),]$Incidental.Sighting <-  T
   data$sightings[which(data$sightings$time_index == "2021-06-07 12:27:44"),]$Incidental.Sighting <-  T
   data$sightings[which(data$sightings$time_index == "2021-06-08 15:00:15"),]$Incidental.Sighting <-  T
+  data$sightings[which(data$sightings$time_index == "2021-06-04 14:18:08"),]$Reticle <-  0.75
+  data$sightings[which(data$sightings$time_index == "2021-06-04 13:01:20"),]$Reticle <-  1
   data$effort[which(data$effort$time_index == "2021-06-17T10:21:10.0"),]$time_index <- "2021-06-17T10:21:10.1"
 
 }
@@ -204,6 +208,64 @@ if(year == 2021 & tolower(month_abb) == "oct"){
   data$sightings[which(data$sightings$Species == "Killer Whale - Southern Resident"),]$Species <- "Killer Whale - Unknown ecotype"
 }
 
+if(year == 2021 & tolower(month_abb) == "nov"){
+  data$effort[which(data$effort$time_index == "2021-11-17T14:05:22.9"),]$Right.Glare.Limit <-  0
+}
+
+if(year == 2022 & tolower(month_abb) == "mar"){
+  data$effort[which(data$effort$PORT.Observer == "SHrushowy"),]$PORT.Observer <-  "JHildering"
+  data$effort[which(data$effort$STBD.Observer == "SHrushowy"),]$STBD.Observer <-  "JHildering"
+  data$effort[which(data$effort$Data.Recorder == "SHrushowy"),]$Data.Recorder <-  "JHildering"
+  data$effort[which(data$effort$PORT.Visibility == "Fair (CCG)"),]$PORT.Visibility <-  "Fair"
+  data$effort[which(data$effort$STBD.Visibility == "Fair (CCG)"),]$STBD.Visibility <-  "Fair"
+  data$effort[which(data$effort$PORT.Visibility == "Moderate"),]$PORT.Visibility <-  "Fair"
+  data$effort[which(data$effort$STBD.Visibility == "Moderate"),]$STBD.Visibility <-  "Fair"
+
+  data$effort[which(data$effort$Platform == "Fujinon_MBBow"),]$Platform <-  "Fujinon_TanuMonkey"
+  data$sightings[which(data$sightings$Sgt.Id == "S1"),]$Species <-  "Humpback Whale"
+
+  data$effort[which(data$effort$time_index == "2022-03-25T15:07:57.0"),]$Transect.ID <-  1
+  data$effort[which(data$effort$time_index == "2022-03-25T15:28:23.8"),]$Action <-  "Weather update"
+  data$effort[which(data$effort$time_index == "2022-03-28T17:38:00.1"),]$Beaufort <-  2
+
+}
+
+if(year == 2022 & tolower(month_abb) == "apr"){
+  data$effort[which(data$effort$Platform == "Fujinon_TanuMonkey"),]$Platform <-  "Fujinon_MBBow"
+  data$effort[which(data$effort$time_index == "2022-04-26T15:07:13.1"),]$Glare <- "None"
+  # data$effort <- data$effort[which(!data$effort$time_index == "2022-04-26T11:55:25.6"),] speed slowed, so data are correct to go off effort for a minute
+  # data$effort <- data$effort[which(!data$effort$time_index == "2022-04-26T11:53:59.2"),] perhaps captain passing shades or cloths to obs's since no data person
+  data$effort[which(data$effort$time_index == "2022-04-26T11:55:25.6"),]$Transect.ID <-  4 # but have to restate transect id when back on effort
+  data$effort[which(data$effort$time_index == "2022-04-26T11:55:25.6"),]$PORT.Visibility <-  "Excellent/Good"
+  data$effort[which(data$effort$time_index == "2022-04-26T11:55:25.6"),]$Beaufort <-  4
+  data$effort[which(data$effort$time_index == "2022-04-26T11:55:25.6"),]$STBD.Visibility <-  "Excellent/Good"
+  data$effort[which(data$effort$time_index == "2022-04-26T11:55:25.6"),]$Cloud.Cover <-  "50% to 75%"
+  # data$effort[which(!data$effort$time_index == "2022-04-26 11:55:25"),]$Transect.ID <-  4
+
+  data$sightings[which(date(data$sightings$time_index) == "2022-04-25"),]$Incidental.Sighting <- T
+  data$sightings[which(data$sightings$Reticle.Instr == "Fujinon_TanuMonkey"),]$Reticle.Instr <- "Fujinon_MBBow"
+}
+
+if(year == 2022 & tolower(month_abb) == "jul"){
+  data$effort[which(data$effort$time_index == "2022-07-19T14:35:46.9"),]$time_local <- "2022-07-19T14:35:46.9"
+}
+
+if(year == 2022 & tolower(month_abb) == "aug"){
+  req.conditions <- c("Platform","Transect.ID","Effort_Instrument","PORT.Visibility","Beaufort","STBD.Visibility","Swell","Glare","Cloud.Cover","Precipitation")
+
+  data$effort[which(data$effort$time_index == "2022-08-24T11:24:46.8"),req.conditions] <- data$effort[which(data$effort$time_index == "2022-08-24T11:00:14.2"),req.conditions]
+}
+
+if(year == 2022 & tolower(month_abb) == "sep"){
+  data$effort[which(data$effort$time_index == "2022-09-20T11:33:13.7"),]$Transect.ID <- 2
+}
+
+if(year == 2022 & tolower(month_abb) == "oct"){
+  data$effort[which(data$effort$time_index == "2022-10-13T13:13:07.4"),]$Transect.ID <- 28
+  data$effort[which(data$effort$time_index == "2022-10-13T13:35:01.8"),]$Transect.ID <- 28
+  data$effort[which(data$effort$time_index == "2022-10-13T13:46:53.6"),]$Transect.ID <- 27
+  data$effort[which(data$effort$time_index == "2022-10-13T13:46:53.6"),]$Precipitation <- "Smoke"
+}
 
 # ----------------------------------------------------------------------
 # ---------- SAVE TIDY, COLLATED DATA FOR INPUT TO EVA'S CODE ----------
