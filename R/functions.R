@@ -92,7 +92,7 @@ tidy_transects <- function(file_name,
     t <- plotKML::readGPX(file.path(dir,  file_name))[[5]]
   }
 
-  iterations <- data.frame(cbind(year = c(rep(2020,3), rep(2021, 11), rep(2022,3)),
+  surveys <- data.frame(cbind(year = c(rep(2020,3), rep(2021, 11), rep(2022,3)),
                                  month_abb =c("Sep", "Oct", "Nov", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar"),
                                  iteration = c(1,2,3,6,7,8,9,10,11,12,13,14,15,16,17,18,19)))
   year <- case_when(
@@ -116,7 +116,7 @@ tidy_transects <- function(file_name,
     grepl('dec', file_name) == T ~ 12)
   month_abb <- month.abb[month]
   if(year == 2020 & month_abb == "Aug") month_abb <- "Sep"
-  iteration <- iterations$iteration[which(iterations$year == year & iterations$month == month.abb[month])]
+  iteration <- surveys$iteration[which(surveys$year == year & surveys$month == month.abb[month])]
 
 
   output <- purrr::map_df(t, get_lines) %>%
@@ -576,10 +576,10 @@ survey_summary <- function(single=T,
    }else{
      k <- 0
      survey_data <- list()
-     iterations %<>% filter(!iteration==99)
-     for(i in unique(iterations$year)){
-       # year <- iterations[[i]]$year
-       for(j in unique(iterations %>% filter(year==i))$month){
+     surveys %<>% filter(!iteration==99)
+     for(i in unique(surveys$year)){
+       # year <- surveys[[i]]$year
+       for(j in unique(surveys %>% filter(year==i))$month){
          # month_abb <- j
          k <- k+1
          survey_data[[k]] <- read.table(file.path("C:\\Users\\KeppelE\\Documents\\CeMoRe\\Analysis\\cemore_analysis/survey_data/tidy_data",i,tolower(j),paste0("cemore_",i,tolower(j),"_dataSurveyID.txt")))
