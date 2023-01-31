@@ -13,18 +13,19 @@
 #' ##Not run: combine_mysti_obs(year = 2021, month = "09",day = 20)
 #' ##End(Not run)
 combine_mysti_obs <- function(year, month, day){
-  dir = paste0("survey_data/raw_data/",year,"-",month,"/observations/")
+  dir = paste0("survey_data/raw_data/",year,"/",year,"-",month,"/observations/")
   folder <- paste0("obs", year, "-", month, "-", day)
   newdir <- paste0(dir, folder)
   if(!exists(newdir)) dir.create(newdir, showWarnings = F)
-  file = c("EffortEnv", "RF Sighting", "Sighting", "xMultiSpecies", "zComments")
+  file = list.files(paste0(newdir, "a"))
+  # file = c("EffortEnv", "RF Sighting", "Sighting", "xMultiSpecies", "zComments")
 
   combine <- function(file){
     file = file
-    x <- read.csv(paste0(newdir, "a/", file, ".csv"))
-    y <- read.csv(paste0(newdir, "b/", file, ".csv"))
+    x <- read.csv(paste0(newdir, "a/", file))
+    y <- read.csv(paste0(newdir, "b/", file))
     z <- rbind(x,y)
-    write.csv(z, paste0(newdir,"/", file, ".csv"), row.names = F)
+    write.csv(z, paste0(newdir,"/", file), row.names = F)
   }
 
   purrr::map(file, combine)

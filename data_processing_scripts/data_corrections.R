@@ -16,6 +16,7 @@ data$effort$Swell[which(data$effort$Swell == "None")] <- "No swell"
 data$effort %<>% mutate(gsub("<25%", "0%-25%", Cloud.Cover))
 data$effort %<>% mutate(iteration = iteration)
 
+if(!survey$Vessel_code == "FR") data$effort$Franklin.Hut <- NA
 #data$effort[which(!is.na(data$effort$Transect.ID)),] %<>% mutate(Transect.ID = paste(iteration, Transect.ID, sep = "-"))
 
 # ----------------------------------------------------------------------
@@ -265,6 +266,22 @@ if(year == 2022 & tolower(month_abb) == "oct"){
   data$effort[which(data$effort$time_index == "2022-10-13T13:35:01.8"),]$Transect.ID <- 28
   data$effort[which(data$effort$time_index == "2022-10-13T13:46:53.6"),]$Transect.ID <- 27
   data$effort[which(data$effort$time_index == "2022-10-13T13:46:53.6"),]$Precipitation <- "Smoke"
+}
+
+if(year == 2023 & tolower(month_abb) == "jan"){
+  data$sightings$Reticle.Instr <- "Fujinon_FranklinMI"
+  data$effort$Platform <- "Fujinon_FranklinMI"
+  data$effort$iteration <- 1001
+  data$effort[which(data$effort$time_index == "2023-01-21T10:10:30.2"),]$time_local <- "2023-01-21T10:10:30.2"
+  data$effort[which(data$effort$time_index == "2023-01-18T16:15:32.2"),]$time_local <- "2023-01-18T16:14:44.0"
+  data$effort[which(data$effort$time_index == "2023-01-18T16:15:32.2"),]$time_index <- "2023-01-18T16:14:44.0"
+  t <- read.csv("survey_data/tracklines/transects/csv/2023-01/Vehicle   Track CeMoRe vessel  Started at 20230116 PST.csv") %>%
+    filter(lubridate::date(Time.Created..PST.)=="2023-01-16") %>%
+    write.csv("survey_data/tracklines/transects/csv/2023-01/Vehicle   Track CeMoRe vessel  Started at 20230116 PST.csv", row.names = F)
+  t <- read.csv("survey_data/tracklines/transects/csv/2023-01/Vehicle   Track CeMoRe vessel  Started at 20230117 PST.csv") %>%
+    filter(lubridate::date(Time.Created..PST.)=="2023-01-17") %>%
+    write.csv("survey_data/tracklines/transects/csv/2023-01/Vehicle   Track CeMoRe vessel  Started at 20230117 PST.csv", row.names = F)
+
 }
 
 # ----------------------------------------------------------------------

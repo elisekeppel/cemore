@@ -19,3 +19,4 @@
 "Roller Bay", "RB", "RBbridge",,,
 "Roller Bay", "RB", "RBFly_sit",2.74,3.60,"FB=fly bridge"
 "Roller Bay", "RB", "RBFly_stand",2.74,4.34,"FB=fly bridge"
+"Franklin", "FR", "Fujinon_FranklinMI","Mo",14.95,16.65,"HOE = 1.7 m to eye + HOP

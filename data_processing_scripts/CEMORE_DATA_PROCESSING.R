@@ -177,7 +177,7 @@ gps <- as.data.frame(dfList[[6]])
 cat("Checking dataframe column names...\n\n")
 
 #Effort fields depend on the vessel platform # EK edit
-nn <- c("time_index", "time_local","Action","Status","Platform","PORT.Observer","STBD.Observer","Effort_Instrument","Data.Recorder","Beaufort", "PORT.Visibility","STBD.Visibility","Swell","Glare","Left.Glare.Limit","Right.Glare.Limit","Cloud.Cover","Precipitation","Comments", "Locked.from.Editing","QA.QC_Comments")
+nn <- c("time_index", "time_local","Action","Status","Platform","Franklin.Hut","PORT.Observer","STBD.Observer","Effort_Instrument","Data.Recorder","Beaufort", "PORT.Visibility","STBD.Visibility","Swell","Glare","Left.Glare.Limit","Right.Glare.Limit","Cloud.Cover","Precipitation","Comments", "Locked.from.Editing","QA.QC_Comments")
 if(length(which(nn %ni% colnames(effort)))!=0){
   beep(10)
   stop(paste("Column name(s) in EffortEnv.csv are missing or misspelled. We are looking for:", nn[which(nn %ni% colnames(effort))], sep = " "), call. = FALSE)
@@ -209,7 +209,7 @@ cat("\nDONE")
 cat("\n\nRemoving spaces from character strings in dataframes...")
 
 #Remember Sighting #s will likely be character strings (due to 'a,b,c' labelling), so should be included in this step
-index<-which(names(effort) %in% c("PORT.Observer","STBD.Observer","Data.Recorder","PORT.Bigeyes","STBD.Bigeyes","PORT.Visibility","STBD.Visibility"))
+index<-which(names(effort) %in% c("PORT.Observer","STBD.Observer","Data.Recorder","PORT.Bigeyes","STBD.Bigeyes","PORT.Visibility","STBD.Visibility","Franklin.Hut"))
 for(j in index) {effort[,j]<-gsub("[[:space:]]","",effort[,j])}
 # index<-which(names(ship) %in% c("Ship_code","Platform"))
 # for(j in index) {ship[,j]<-gsub("[[:space:]]","",ship[,j])}
@@ -268,15 +268,8 @@ if(sum(effort$time_index==effort$time_local)!=nrow(effort)){
   stop(paste("Oops! There appear to be inconsistent Time entries in the  Effort table. Time_Index: ", toString(as.character(effort[which(effort$time_index!=effort$time_local),]$time_index))," Please correct these entries (Time_Index and Time_local should be identical) and run this code again.",sep = " "), call. = FALSE)
 }
 
-# TO DO
-# effort <- effort[,c("time_index","time_local","Action","Status","Transect.ID","Platform","PORT.Observer","STBD.Observer","Effort_Instrument","Data.Recorder","PORT.Bigeyes","STBD.Bigeyes","PORT.Visibility","PORT.Beaufort","STBD.Visibility","STBD.Beaufort","Swell","Glare","Left.Glare.Limit","Right.Glare.Limit","Cloud.Cover","Precipitation","WindSpeed","Water.Temp..C.","Comments","Locked.from.Editing","QAQC_Comments")] EK edit
-#nov 2020
-# effort <- cbind(effort[,c("time_index","time_local","Action","Status")], Transect.ID=NA, effort[,c("Platform","PORT.Observer","STBD.Observer","Effort_Instrument","Data.Recorder")], PORT.Bigeyes = rep("NA", nrow(effort)), STBD.Bigeyes = rep("NA", nrow(effort)), effort[,c("PORT.Visibility","Beaufort","STBD.Visibility","Swell","Glare","Left.Glare.Limit","Right.Glare.Limit","Cloud.Cover","Precipitation")], Water.Temp..C. = as.numeric(rep(NA, nrow(effort))), effort[,c("Comments","Locked.from.Editing","QA.QC_Comments")])
-# sept 2020
-# effort <- cbind(effort[,c("time_index","time_local","Action","Status","Transect.ID","Platform","PORT.Observer","STBD.Observer","Effort_Instrument","Data.Recorder", "PORT.Visibility","Beaufort","STBD.Visibility","Swell","Glare","Left.Glare.Limit","Right.Glare.Limit","Cloud.Cover","Precipitation", "Comments","Locked.from.Editing","QA.QC_Comments")])
-effort <- effort[,c("time_index","time_local","Action","Status","Transect.ID","Platform","PORT.Observer","STBD.Observer","Effort_Instrument","Data.Recorder", "PORT.Visibility","Beaufort","STBD.Visibility","Swell","Glare","Left.Glare.Limit","Right.Glare.Limit","Cloud.Cover","Precipitation", "Comments","Locked.from.Editing","QA.QC_Comments")]
+effort <- effort[,c("time_index","time_local","Action","Status","Transect.ID","Platform","Franklin.Hut","PORT.Observer","STBD.Observer","Effort_Instrument","Data.Recorder", "PORT.Visibility","Beaufort","STBD.Visibility","Swell","Glare","Left.Glare.Limit","Right.Glare.Limit","Cloud.Cover","Precipitation", "Comments","Locked.from.Editing","QA.QC_Comments")]
 
-#effort <-effort[,c("time_index","time_local","Action","Status","Transect.ID","Platform","PORT.Observer","STBD.Observer","Effort_Instrument","Data.Recorder", PORT.Bigeyes = rep("NA", nrow(effort)), STBD.Bigeyes = rep("NA", nrow(effort)))],"PORT.Visibility","Beaufort","STBD.Visibility","Swell","Glare","Left.Glare.Limit","Right.Glare.Limit","Cloud.Cover","Precipitation","Comments","Locked.from.Editing","QA.QC_Comments")]
 
 #Numeric variables
 nv <- c("Beaufort","Left.Glare.Limit","Right.Glare.Limit")
@@ -292,7 +285,7 @@ for(j in index) {
 effort[,index]<-lapply(index, function(x) as.numeric(as.character(effort[,x])))
 
 #Character variables
-cv <- c("Action","Status","Transect.ID","Platform","PORT.Observer","STBD.Observer","Effort_Instrument","Data.Recorder","PORT.Visibility","STBD.Visibility","Swell","Glare","Cloud.Cover","Precipitation","Comments","QA.QC_Comments")
+cv <- c("Action","Status","Transect.ID","Platform","Franklin.Hut","PORT.Observer","STBD.Observer","Effort_Instrument","Data.Recorder","PORT.Visibility","STBD.Visibility","Swell","Glare","Cloud.Cover","Precipitation","Comments","QA.QC_Comments")
 
 index <- which(names(effort) %in% cv)
 effort[,index]<-lapply(index, function(x) as.character(effort[,x]))
@@ -398,7 +391,7 @@ if(sum(is.na(survey$Date_Start_GMT))==nrow(survey) | sum(is.na(survey$Date_End_G
 
 #Rename field names (to be consistent with previous survey data) # EK edit
 #----------------------------------------------------------------
-names(effort) <- c("time_index","time_local","Action","Status","Transect.ID","Platform","Port.Observer","Starboard.Observer","Effort_Instrument","DataRecorder","PORT.Visibility","Beaufort","STBD.Visibility","Swell","Glare","Left.Glare.Limit","Right.Glare.Limit","Cloud.Cover","Precipitation","Comments","Locked.from.Editing","QAQC_Comments","GPSIndex")
+names(effort) <- c("time_index","time_local","Action","Status","Transect.ID","Platform","Franklin.Hut","Port.Observer","Starboard.Observer","Effort_Instrument","DataRecorder","PORT.Visibility","Beaufort","STBD.Visibility","Swell","Glare","Left.Glare.Limit","Right.Glare.Limit","Cloud.Cover","Precipitation","Comments","Locked.from.Editing","QAQC_Comments","GPSIndex")
 names(gps) <- c("GpsTime.UTC","GpsTime","Latitude","Longitude","Speed","Heading","GPSIndex")
 names(sightings) <- c("time_index","time_local","GPS.Pos","Sgt.ID","Bearing","Reticle","Horizon_Certainty","Reticle.Instr","Distance","Side","SightedBy","Species","MinNumber","MaxNumber","BestNumber","Photos","Comments","Incidental.Sighting","MYST_Bearing.abs","Sighting.Complete","MYST_SgtDist.nm","MYST.Pos","MYST_Sgt.Lat","MYST_Sgt.Lon","MYST_PSD.nm","QAQC_Comments", "Porpoise.Behaviour","GPSIndex","M.int")
 cat("DONE")
@@ -419,7 +412,7 @@ if(nrow(survey[which(survey$SurveyID %in% surveyid),])!=1){
   }
 }
 #Store the vessel code name for the survey #EK edit
-if(survey[which(survey$SurveyID %in% surveyid),]$Vessel_code %ni% c("MB", "RB", "VE","TA")){
+if(survey[which(survey$SurveyID %in% surveyid),]$Vessel_code %ni% c("MB", "RB", "VE","TA", "FR")){
   ##beep(10)
   stop(paste("Oops! The vessel code assigned to", surveyid, "in the SurveyID table isn't recognized:" , vessel,"Please make sure that vessel code in the SurveyID table is correct and run this code again.", sep = " "), call. = FALSE)
 } else {
@@ -475,7 +468,7 @@ if(sum(DST$Year==year)!=1){
 
 # TO DO set up survey transect id column in survey txt file
 #If there is a survey design, the design, based on the vessel identifier, will be loaded.
-if(vessel %in% c("RB","MB","VE","TA")) {
+if(vessel %in% c("RB","MB","VE","TA","FR")) {
   # beep(10)
   # x <- readline(prompt = cat(paste("How many transects were completed in survey", surveyid, "?   [click here & type number of transects & hit Enter]    \n\n"), sep = " "))
   # transect.name.list.MASTER <- seq(1:x)
@@ -501,7 +494,7 @@ if(length(which(effort$Status %in% c("ON EFFORT (Visual only)", "ON EFFORT (Visu
   effort[which(effort$Status %in% c("ON EFFORT (Visual only)","ON EFFORT (Visual&Acoustic Array)", "ON EFFORT")),]$Status <- "ON"
 }
 
-if(sum(effort$Status %ni% c(NA,"ON","OFF"))!=0){
+if(sum(effort$Status %ni% c(NA,"ON","OFF","CLOSING"))!=0){
   beep(10)
   stop(paste("Oops! There are Status entries in the Effort table that aren't recognized:", toString(unique(effort[which(effort$Status %ni% c(NA,"ON","OFF")),]$Status)),"Please correct these entries and run this code again. If any of these are valid Status entries, contact Eva about incorporating the new Activities into this automated process.",sep = " "), call. = FALSE)
 }
@@ -542,6 +535,9 @@ if(length(which(effort$Platform %in% c("Fujinon_VecBridge","Fujinon_TanuBridge")
 }
 if(length(which(effort$Platform %in% c("Fujinon_TanuMonkey")))!=0){
   effort[which(effort$Platform %in% c("Fujinon_TanuMonkey")),]$Platform <- "Mo"
+}
+if(length(which(effort$Platform %in% c("Fujinon_FranklinMI")))!=0){
+  effort[which(effort$Platform %in% c("Fujinon_FranklinMI")),]$Platform <- "FR"
 }
 #Look in ship table and make sure that all platform entries match the vessel's design
 vessel.platforms <- sort(unique(ship[which(ship$Ship_code==vessel),]$Platform))
@@ -634,12 +630,20 @@ if(sum(is.na(gps$Speed))!=0){
 ####################################################################
 #The sampling rate on the badelf was 1Hz, and random datapoints show erroneous speeds.  My solution is to delete these erroneous speeds, then impute the speed from the following record.  As speed is not used beyond the effort definition (and not even here), this has very little consequence on the data.  Exploring the data shows that 95% of data is between 9.5 and 10.3 knots, however to be conservative I choose 15Knots as the cut off.
 summary(gps$Speed)
-if(vessel == "MB" & max(gps$Speed) >27) stop("There are speeds which exceed 27 knots. Check data and fix if necessary.")
-if(vessel == "RB" & max(gps$Speed) >28) stop("There are speeds which exceed 28 knots. Check data and fix if necessary.")
-if(vessel == "TA" & max(gps$Speed) >20) stop("There are speeds which exceed 20 knots. Check data and fix if necessary.")
-if(vessel == "VE" & max(gps$Speed) >20) stop("There are speeds which exceed 20 knots. Check data and fix if necessary.")
-#
-# if(sum(which(gps$Speed>25))!=0){
+
+#Find Distances that don't make sense - ALL DISTANCES SHOULD BE IN NAUTICAL MILES
+  if((vessel == "MB" & max(gps$Speed) >27) |
+     (vessel == "RB" & max(gps$Speed) >28) |
+     (vessel == "TA" & max(gps$Speed) >20) |
+     (vessel == "VE" & max(gps$Speed) >20) |
+     (vessel == "FR" & max(gps$Speed) >25)){
+    x <- readline(prompt = cat(paste("\nThere are some suspiciously high speeds in the gps data. Do any of these need to be corrected?   [click here & type Yes or No & hit Enter]    \n\n", sep=" ")))
+    if(x %ni% c("NO","no","No","N","n")){
+      beep(10)
+      stop("Please make your corrections in the gps table and re-run this code.", call. = FALSE)
+    }
+  }
+## if(sum(which(gps$Speed>25))!=0){
 #   index=which(gps$Speed>25)
 #   for(i in index){
 #     if(as.numeric(difftime(gps[i,"GpsTime.UTC"],gps[i-1,"GpsTime.UTC"], unit="secs"))<60)
@@ -801,10 +805,6 @@ if(sum(is.na(sightings[which(!is.na(sightings$Reticle)),]$Reticle.Instr))!=0){
 
 sightings$Method <- sightings$Reticle.Instr
 
-#If there is a reported distance, change the defaulted method (originally Reticle Instrument) to NE
-if(sum(!is.na(sightings$Distance))!=0){
-  sightings[which(!is.na(sightings$Distance)),]$Method <- "NE"
-}
 
 #Assign a platform to sightings according to the Method entry
 #unique(sightings$Method)
@@ -812,8 +812,8 @@ sightings$Platform <- NA
 
 if(nrow(sightings[which(sightings$Method %in% c("Fujinon_MBBow", "Fujinon_MBbow")),])!=0){
   sightings[which(sightings$Method %in% c("Fujinon_MBBow", "Fujinon_MBbow")),]$Platform <- "Bo"
-
 }
+
 if(nrow(sightings[which(sightings$Method %in% c("Fujinon_bridge", "Fujinon_MBBridge")),])!=0){
   sightings[which(sightings$Method%in% c("Fujinon_bridge", "Fujinon_MBBridge")),]$Platform <- "Br"
 }
@@ -826,11 +826,22 @@ if(nrow(sightings[which(sightings$Method %in% c("RBFly_stand")),])!=0){
   sightings[which(sightings$Method%in% c("RBFly_stand")),]$Platform <- "RBFly_stand"
 }
 
+# for Franklin
+if(nrow(sightings[which(sightings$Method %in% c("Fujinon_FranklinMI")),])!=0){
+  sightings[which(sightings$Method%in% c("Fujinon_FranklinMI")),]$Platform <- "Fujinon_FranklinMI"
+}
+
+
+#If there is a reported distance, change the defaulted method (originally Reticle Instrument) to NE
+if(sum(!is.na(sightings$Distance))!=0){
+  sightings[which(!is.na(sightings$Distance)),]$Method <- "NE"
+}
+# TO DO: add in Platform creation from Method for Vector and Tanu
 # unique(sightings$Platform)
 
 #Adjust Method entries so they will work with our pre-written functions ('Bi', 'BE', 'NE'):
-if(sum(sightings$Method %in% c("Fujinon_bridge", "Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_MBBridge", "Fujinon_RBbridge", "Fujinon_RBFly","Fujinon_VecBridge","Fujinon_TanuMonkey","Fujinon_TanuBridge"))!=0){
-  sightings[which(sightings$Method %in% c("Fujinon_bridge","Fujinon_MBbow", "Fujinon_MBBow", "Fujinon_MBBridge", "Fujinon_RBbridge", "Fujinon_RBFly", "Fujinon_VecBridge","Fujinon_TanuMonkey","Fujinon_TanuBridge")),]$Method <- "Bi"
+if(sum(sightings$Method %in% c("Fujinon_bridge", "Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_MBBridge", "Fujinon_RBbridge", "Fujinon_RBFly","Fujinon_VecBridge","Fujinon_TanuMonkey","Fujinon_TanuBridge", "Fujinon_FranklinMI"))!=0){
+  sightings[which(sightings$Method %in% c("Fujinon_bridge","Fujinon_MBbow", "Fujinon_MBBow", "Fujinon_MBBridge", "Fujinon_RBbridge", "Fujinon_RBFly", "Fujinon_VecBridge","Fujinon_TanuMonkey","Fujinon_TanuBridge", "Fujinon_FranklinMI")),]$Method <- "Bi"
 }
 
 
@@ -1256,9 +1267,14 @@ rownames(ONeffort) <- c(1:nrow(ONeffort))
 #Filter effort table to fields of interest only for exporting table # EK edit - remove stbd/port beaufort; GpsTime.PDT changed to PST temporarily - need to address this
 #--------------------------------------------------------------------
 #I haven't run fill on instrument, platform, etc. IF run into issues will have to address this.
-Effort.Final<- ONeffort[,c("Vessel","GPSIndex","GpsTime.UTC","GpsTime","Latitude","Longitude","Speed","Heading","Status","Final.Transect.ID","ONSEQ_ID","Platform","Port.Observer","Starboard.Observer","Effort_Instrument","DataRecorder","PORT.Visibility","Beaufort","STBD.Visibility","Swell","Glare","Left.Glare.Limit","Right.Glare.Limit","Cloud.Cover","Precipitation")]
+if(survey$Vessel_code == "FR"){
+  Effort.Final<- ONeffort[,c("Vessel","GPSIndex","GpsTime.UTC","GpsTime","Latitude","Longitude","Speed","Heading","Status","Transect.ID","Final.Transect.ID","ONSEQ_ID","Platform","Franklin.Hut","Port.Observer","Starboard.Observer","Effort_Instrument","DataRecorder","PORT.Visibility","Beaufort","STBD.Visibility","Swell","Glare","Left.Glare.Limit","Right.Glare.Limit","Cloud.Cover","Precipitation")]
+  names(Effort.Final)<-c("Vessel","GPSIndex","GpsT.UTC","GpsT","Latitude","Longitude","Speed","Heading","Status","Raw.T.ID","Final.T.ID","ONSEQ_ID","Platform","FR.Hut","Port.Obs", "Stbd.Obs","E_Instr","Data","Port.Vis","Bf","Stbd.Vis","Swell","Glare","L.G.Limit","R.G.Limit","CloudCover","Precip") # EK edit - combine bf and remove windspeed
+}else{
+  Effort.Final<- ONeffort[,c("Vessel","GPSIndex","GpsTime.UTC","GpsTime","Latitude","Longitude","Speed","Heading","Status","Transect.ID","Final.Transect.ID","ONSEQ_ID","Platform","Port.Observer","Starboard.Observer","Effort_Instrument","DataRecorder","PORT.Visibility","Beaufort","STBD.Visibility","Swell","Glare","Left.Glare.Limit","Right.Glare.Limit","Cloud.Cover","Precipitation")]
+  names(Effort.Final)<-c("Vessel","GPSIndex","GpsT.UTC","GpsT","Latitude","Longitude","Speed","Heading","Status","Raw.T.ID","Final.T.ID","ONSEQ_ID","Platform","Port.Obs", "Stbd.Obs","E_Instr","Data","Port.Vis","Bf","Stbd.Vis","Swell","Glare","L.G.Limit","R.G.Limit","CloudCover","Precip") # EK edit - combine bf and remove windspeed
+}
 Effort.Final$SurveyID <- surveyid
-names(Effort.Final)<-c("Vessel","GPSIndex","GpsT.UTC","GpsT","Latitude","Longitude","Speed","Heading","Status","Final.T.ID","ONSEQ_ID","Platform","Port.Obs", "Stbd.Obs","E_Instr","Data","Port.Vis","Bf","Stbd.Vis","Swell","Glare","L.G.Limit","R.G.Limit","CloudCover","Precip", "SurveyID") # EK edit - combine bf and remove windspeed
 Effort.Final$iteration <- iteration
 cat("\n\n\n
        SIGHTING POSITION CORRECTION
