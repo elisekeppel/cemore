@@ -143,6 +143,10 @@ plot_survey <- function(Save = F,
   # ---------------------------------------------------------------------
 
   if(plot_effort){
+    effort_lines <- effort_lines %>%
+      mutate(Effort = case_when(Effort == "On Effort" ~ "Survey effort",
+                                Effort == "In Transit"~ "In transit"))
+
     if(effort_by_day){
       col <- c(paste0(c(RColorBrewer::brewer.pal(12, "Paired"))))
       g <- g + geom_sf(data = effort_data, size = 0.25, aes(colour = as.factor(date))) +
@@ -152,7 +156,7 @@ plot_survey <- function(Save = F,
     }
     if(show_transit){
       g <- g+ geom_sf(data = effort_lines, size = 0.5, aes(linetype = Effort)) +
-        scale_linetype_manual(values=c("On Effort"="solid", "In Transit" = "dashed")) +
+        scale_linetype_manual(values=c("Survey effort"="solid", "In transit" = "dashed")) +
         ggnewscale::new_scale("linetype")
     }
     # to size lines by vis
@@ -343,9 +347,9 @@ plot_survey <- function(Save = F,
     g <- g + geom_sf(data = ap_sf, alpha = 0.8, colour="black",stroke=0.2,
                      aes(fill = Species, shape = Species, size = Count)) +#
 
-      scale_size_manual(values = c(1.5,2,3),name="Group Size") +
-      scale_fill_manual(values = cols, breaks = sp, name = NULL)   +
-      scale_shape_manual(values = shape, breaks = sp, name = NULL) +
+      scale_size_manual(values = c(1.5,2.25,3),name="Group Size") +
+      scale_fill_manual(values = cols, breaks = sp, name = "Species")   +
+      scale_shape_manual(values = shape, breaks = sp, name = "Species") +
 
       guides(alpha= "none",
              shape = guide_legend(ncol=1,order = 1,override.aes = list(size=2),title.position = "top"),

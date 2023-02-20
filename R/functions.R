@@ -230,7 +230,9 @@ get_obs_data <- function(year, month){
                     time_local = names(s[[i]][grep("local", names(s[[i]]))])) %>%
       dplyr::mutate(sighting_distance = ifelse(is.na(Sgt.Dist..m.), Distance..m., Sgt.Dist..m.),
                     time_index = lubridate::ymd_hms(time_index),
-                    time_local = lubridate::ymd_hms(time_local)) %>%
+                    time_local = lubridate::ymd_hms(time_local),
+                    Porpoise.approaching = as.character(Porpoise.approaching)
+      ) %>%
       dplyr::mutate_at(c('Photos', 'Incidental.Sighting', 'Sighting.Complete'), as.logical) %>%
       dplyr::mutate_at(c('Bearing', 'time_index', 'time_local', 'GPS.Pos', 'Sgt.Id', 'Horizon_Certainty',
                          'Reticle.Instr', 'Side', 'Obs', 'Species', 'Comments', 'Sgt.Pos', 'QA.QC.Comments','Porpoise.Behaviour'), as.character) %>%

@@ -145,8 +145,9 @@ if(surveyid == "cemore_2021jan"){
   data$effort[which(data$effort$time_index == "2021-01-20T16:18:21.6"),]$time_index <- "2021-01-20T16:17:15"
   data$effort[which(data$effort$time_index == "2021-01-22T13:45:32.1"),]$time_local <- "2021-01-22T13:45:08"
   data$effort[which(data$effort$time_index == "2021-01-22T13:45:32.1"),]$time_index <- "2021-01-22T13:45:08"
-  data$sightings[which(data$sightings$time_index == "2021-01-20 14:30:09"),]$Reticle <- 0.9
+  data$sightings[which(data$sightings$time_index == "2021-01-20 14:30:09"),]$Reticles <- 0.9
 }
+
 
 
 # EK edit temp fix for data with "-" in Bearing column. Fixed in my data processing code
@@ -283,6 +284,12 @@ if(year == 2023 & tolower(month_abb) == "jan"){
     write.csv("survey_data/tracklines/transects/csv/2023-01/Vehicle   Track CeMoRe vessel  Started at 20230117 PST.csv", row.names = F)
 
 }
+
+if(year == 2023 & tolower(month_abb) == "feb"){
+  data$effort[which(data$effort$PORT.Visibility == "Fair (CCG)"),]$PORT.Visibility <- "Moderate"
+  data$effort[which(data$effort$STBD.Visibility == "Fair (CCG)"),]$STBD.Visibility <- "Moderate"
+}
+
 
 # ----------------------------------------------------------------------
 # ---------- SAVE TIDY, COLLATED DATA FOR INPUT TO EVA'S CODE ----------
