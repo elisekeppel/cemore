@@ -1,5 +1,6 @@
 # after Eva's code
-plot_survey <- function(Save = F,
+plot_survey <- function(data = ap_sf,
+                        Save = F,
                         file_name = NULL,
 
                         bathy=NULL,
@@ -9,7 +10,7 @@ plot_survey <- function(Save = F,
                         badelf = NULL,
 
                         plot_effort = T, # T/F
-                        effort_data = effort_lines,
+                        effort_data = effort_data,
                         effort_by_day = F,
                         effort_by_vis = F,
                         show_transit = T,
@@ -21,7 +22,7 @@ plot_survey <- function(Save = F,
                         plot_sgt = T,
                         species = NULL,
                         incidentals = F,
-                        incl = F, # include hw and porps in incidentals
+                        incl_porps = F, # include hw and porps in incidentals
 
                         hydrophone = F,
 
@@ -39,16 +40,16 @@ plot_survey <- function(Save = F,
   # if(!exists(effort) & !single_survey) effort <- F
 
   if(!single_survey){
-    ap_sf <- all_ap_sf
+    data <- all_ap_sf
     effort_data <- all_effort_lines
-    years <- unique(ap_sf$year)
-    months <- unique(ap_sf$month)
+    years <- unique(data$year)
+    months <- unique(data$month)
   }else{
     years <- year
     months <- month
   }
 
-  ap_sf <- ap_sf %>% dplyr::select(year,month,Species,Group_Size,season)
+  ap_sf <- data %>% dplyr::select(year,month,Species,Group_Size,season)
 
   # ----------------------------------------------------------------------
   # ----------------- LOAD SPATIAL FILES --------------------------------
@@ -143,9 +144,9 @@ plot_survey <- function(Save = F,
   # ---------------------------------------------------------------------
 
   if(plot_effort){
-    effort_lines <- effort_lines %>%
-      mutate(Effort = case_when(Effort == "On Effort" ~ "Survey effort",
-                                Effort == "In Transit"~ "In transit"))
+    # effort_data <- effort_data %>%
+    #   mutate(Effort = case_when(status == "On Effort" ~ "Survey effort",
+    #                             status == "In Transit"~ "In transit"))
 
     if(effort_by_day){
       col <- c(paste0(c(RColorBrewer::brewer.pal(12, "Paired"))))
@@ -155,7 +156,7 @@ plot_survey <- function(Save = F,
         ggnewscale::new_scale("colour")
     }
     if(show_transit){
-      g <- g+ geom_sf(data = effort_lines, size = 0.5, aes(linetype = Effort)) +
+      g <- g+ geom_sf(data = effort_data, size = 0.5, aes(linetype = status)) +
         scale_linetype_manual(values=c("Survey effort"="solid", "In transit" = "dashed")) +
         ggnewscale::new_scale("linetype")
     }
@@ -198,7 +199,7 @@ plot_survey <- function(Save = F,
       # guides(linewidth = guide_legend(ncol=1,order = 3,override.aes = list(size=1),title.position="top")) + #
     }
 
-    if(!effort_by_day & !effort_by_vis & !show_transit){
+    if(!effort_by_day & !effort_by_vis){ #  & !show_transit
       g <- g + geom_sf(data = effort_data, size = 0.25, aes(colour = "Survey effort"))# +
       # scale_colour_manual(values=c("Off effort" = "grey60", "On effort" = "black")) +
       # guides(colour = guide_legend(ncol=1,order = 3,override.aes = list(size=1),title.position=NULL))  #    }
@@ -224,15 +225,33 @@ plot_survey <- function(Save = F,
   # ---------------------------------------------------------------------
   # ------------------------- TRACKS/EFFORT LABELS ----------------------
   # ---------------------------------------------------------------------
-  if(N){
+  if(N & season){
     tx <- effort_data %>% data.frame() %>%
       group_by(season) %>%
       dplyr::summarise(N = n_distinct(SurveyID))
     g <- g+geom_text(data = tx, aes(x = -124.4, y = 48.9, label = paste0(N, " surveys")), size = 3)}
-  if(km){
+  if(km & season){
     tx2 <- effort_data %>% data.frame() %>%
       mutate(length_km=st_length(geometry)) %>%
       dplyr::group_by(season) %>%
+      # dplyr::summarise(dist = round(sum(length_km/1000),0))
+
+      # prettyNum(round(x,2),
+      #           big.mark=",")
+      dplyr::summarise(dist = prettyNum(round(sum(length_km/1000),0),
+                                        big.mark=","))
+
+    g <- g+geom_text(data = tx2, aes(x = -124.4, y = 48.8, label = paste0(dist, " km")), size = 3)}
+
+  if(N & monthly){
+    tx <- effort_data %>% data.frame() %>%
+      group_by(month_abb) %>%
+      dplyr::summarise(N = n_distinct(SurveyID))
+    g <- g+geom_text(data = tx, aes(x = -124.4, y = 48.9, label = paste0(N, " surveys")), size = 3)}
+  if(km & monthly){
+    tx2 <- effort_data %>% data.frame() %>%
+      mutate(length_km=st_length(geometry)/1000) %>%
+      dplyr::group_by(month_abb) %>%
       # dplyr::summarise(dist = round(sum(length_km),0))
 
       # prettyNum(round(x,2),
@@ -241,6 +260,7 @@ plot_survey <- function(Save = F,
                                         big.mark=","))
 
     g <- g+geom_text(data = tx2, aes(x = -124.4, y = 48.8, label = paste0(dist, " km")), size = 3)}
+
 
   # legacy from effort_only
   # g <- g+ coord +
@@ -253,8 +273,6 @@ plot_survey <- function(Save = F,
   #         legend.position="none") +
   #   facet_wrap(~ month_abb, ncol=3)
 
-  if(depth){
-    g <- cowplot::plot_grid(g, leg1, ncol = 1, rel_heights = c(1, .00001))}
 
   # ----------------------------------------------------------------------
   # ----------------------------- SIGHTINGS ------------------------------
@@ -268,7 +286,7 @@ plot_survey <- function(Save = F,
   # ----------------------------------------------------------------------
   if(plot_sgt){
     if(incidentals){
-      inc <- get_incid(single_survey = single_survey, include_hw_porps = incl) %>%
+      inc <- get_incid(single_survey = single_survey, include_hw_porps = incl_porps) %>%
         tidyr::separate(GPS.Pos, into = c("lat", "lon"), sep = "N") %>%
         dplyr::mutate(lon = substr(lon, 2, nchar(lon)-3)) %>%
         dplyr::mutate(lat = substr(lat, 1, nchar(lat)-2)) %>%
@@ -289,7 +307,7 @@ plot_survey <- function(Save = F,
       if(!nrow(inc)<0) ap_sf <- bind_rows(ap_sf,inc)
     }
 
-    if(!is.null(species)) ap_sf %<>% dplyr::filter(Species %in% species)
+    if(!is.null(species)) ap_sf %<>% dplyr::filter(Species %like% species)
 
     # to not display all potential species in legend
     ap_sf$Species %<>% droplevels()
@@ -383,7 +401,7 @@ plot_survey <- function(Save = F,
   if(season) g <- g + facet_wrap(~ season) #+ # guides(shape="none",fill="none",size="none")
   # if(season & !is.null(species)) g <- g + #ggtitle(first_up(paste(species))) #
   # + guides(size="none")
-  if(monthly) g <- g + facet_wrap(~ month) #+ # guides(shape="none",fill="none",size="none")
+  if(monthly) g <- g + facet_wrap(~ month_abb) #+ # guides(shape="none",fill="none",size="none")
 
   g <- g +
     theme(
@@ -420,6 +438,10 @@ plot_survey <- function(Save = F,
   # ----------------------------------------------------------------------
   # ----------------------------- SAVING ---------------------------------
   # ----------------------------------------------------------------------
+
+  if(depth){
+    g <- cowplot::plot_grid(g, leg1, ncol = 1, rel_heights = c(1, .00001))}
+
   if(Save){
     if(single_survey){
       if(is.null(file_name)) file_name <- paste0("C:/Users/keppele/Documents/CeMoRe/Analysis/cemore_analysis/output_maps/summary_map_",survey_title,".png")
