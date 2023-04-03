@@ -348,7 +348,7 @@ create_bb<- function(xmin, xmax, ymin, ymax){
 get_effort_lines <- function(effort){
   effort %<>%
     dplyr::filter(Status == "ON") %>%
-    dplyr::select(Vessel,date,year, month, month_abb, day,GpsT,transect_no, Effort,TransectID, Latitude, Longitude, ONSEQ_ID, SurveyID, season, CloudCover, Beaufort=Bf,Visibility=Port.Vis,
+    dplyr::select(Vessel,date,year, month, month_abb, day,GpsT,transect_no, status,TransectID, Latitude, Longitude, ONSEQ_ID, SurveyID, season, CloudCover, Beaufort=Bf,Visibility=Port.Vis,
                   Swell, Glare, Precip, Port.Obs, Stbd.Obs) %>%
     # dplyr::mutate(Glare = ifelse(!Glare == "None", "y","n")) %>%
     dplyr::mutate(date=lubridate::date(GpsT)) %>%
@@ -361,7 +361,7 @@ get_effort_lines <- function(effort){
       year, month, month_abb, day, transect_no,
                     TransectID
                     , CloudCover, season, Beaufort,Visibility,
-                    Swell, Glare, Precip, Port.Obs, Stbd.Obs,Effort
+                    Swell, Glare, Precip, Port.Obs, Stbd.Obs,status
                     ) %>%
     dplyr::summarize(do_union=FALSE) %>%
     sf::st_cast("LINESTRING")
@@ -388,8 +388,8 @@ load_effort <- function(year, month, single_survey = T, vessel=NULL,dir=NULL){
                               month %in% c(7:9) ~ "Summer",
                               month %in% c(10:12)  ~ "Fall"
                             ), levels = c("Winter", "Spring", "Summer", "Fall")),
-                            transect_no = as.numeric(gsub(surveyid, "", Final.T.ID)),
-                            Effort = ifelse(transect_no <100,"On Effort","In Transit")) %>%
+                            transect_no = as.numeric(gsub(SurveyID, "", Final.T.ID)),
+                            status = ifelse(transect_no <100,"On Effort","In Transit")) %>%
     dplyr::rename(TransectID=Final.T.ID)
 
   if(!is.null(vessel)) effort %<>% filter(Vessel == vessel)
