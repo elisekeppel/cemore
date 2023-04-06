@@ -45,15 +45,6 @@ suppressMessages(library(stringr))
 #This will make all warnings/errors/issues stop the process and produce an error message
 options(warn=2, error=NULL)
 
-# Load required functions created by Eva
-# EK edit: unnecessary as these are loaded from Eva_functions.R file with the package
-#====================================
-
-# files <- list.files(file.path("survey_data", "tidy_data",year, tolower(month_abb)))
-
-# surveyid = substr(files[1],start=1, stop=8)
-# surveyID.abbrev = gsub("CRP","",surveyid)
-
 #Load data files
 #====================================
 #Load survey data files:
@@ -105,7 +96,7 @@ if(exists("DST")){
 
 #Import GPS data
 cat("Importing GPS data... ")
-track.path <- paste(getwd(), u,"survey_data",u, "tracklines",u, "transects", u, "csv",u, year, "-", month,sep="")
+track.path <- paste(getwd(), u,main.dir,u, "tracklines",u, "transects", u, "csv",u, year, "-", month,sep="")
 track.files <- list.files(track.path,include.dirs = FALSE,full.names = TRUE)
 track.list <- as.list(track.files)
 for(i in 1:length(track.list)) { #upload all GPS tables
@@ -177,6 +168,7 @@ gps <- as.data.frame(dfList[[6]])
 cat("Checking dataframe column names...\n\n")
 
 #Effort fields depend on the vessel platform # EK edit
+if(is.null(effort$Franklin.Hut)) effort$Franklin.Hut <- NA
 nn <- c("time_index", "time_local","Action","Status","Platform","Franklin.Hut","PORT.Observer","STBD.Observer","Effort_Instrument","Data.Recorder","Beaufort", "PORT.Visibility","STBD.Visibility","Swell","Glare","Left.Glare.Limit","Right.Glare.Limit","Cloud.Cover","Precipitation","Comments", "Locked.from.Editing","QA.QC_Comments")
 if(length(which(nn %ni% colnames(effort)))!=0){
   beep(10)
@@ -412,7 +404,7 @@ if(nrow(survey[which(survey$SurveyID %in% surveyid),])!=1){
   }
 }
 #Store the vessel code name for the survey #EK edit
-if(survey[which(survey$SurveyID %in% surveyid),]$Vessel_code %ni% c("MB", "RB", "VE","TA", "FR")){
+if(survey[which(survey$SurveyID %in% surveyid),]$Vessel_code %ni% c("MB", "RB", "VE","TA", "FR", "CC", "GN", "TJ")){
   ##beep(10)
   stop(paste("Oops! The vessel code assigned to", surveyid, "in the SurveyID table isn't recognized:" , vessel,"Please make sure that vessel code in the SurveyID table is correct and run this code again.", sep = " "), call. = FALSE)
 } else {
@@ -468,7 +460,7 @@ if(sum(DST$Year==year)!=1){
 
 # TO DO set up survey transect id column in survey txt file
 #If there is a survey design, the design, based on the vessel identifier, will be loaded.
-if(vessel %in% c("RB","MB","VE","TA","FR")) {
+if(vessel %in% c("RB","MB","VE","TA","FR","CC","GN","TJ")) {
   # beep(10)
   # x <- readline(prompt = cat(paste("How many transects were completed in survey", surveyid, "?   [click here & type number of transects & hit Enter]    \n\n"), sep = " "))
   # transect.name.list.MASTER <- seq(1:x)
@@ -539,6 +531,16 @@ if(length(which(effort$Platform %in% c("Fujinon_TanuMonkey")))!=0){
 if(length(which(effort$Platform %in% c("Fujinon_FranklinMI")))!=0){
   effort[which(effort$Platform %in% c("Fujinon_FranklinMI")),]$Platform <- "FR"
 }
+if(length(which(effort$Platform %in% c("Fujinon_CharleyC")))!=0){
+  effort[which(effort$Platform %in% c("Fujinon_CharleyC")),]$Platform <- "CC"
+}
+if(length(which(effort$Platform %in% c("Fujinon_GreatNorthern")))!=0){
+  effort[which(effort$Platform %in% c("Fujinon_GreatNorthern")),]$Platform <- "GN"
+}
+if(length(which(effort$Platform %in% c("Fujinon_TitanJunior")))!=0){
+  effort[which(effort$Platform %in% c("Fujinon_TitanJunior")),]$Platform <- "TJ"
+}
+
 #Look in ship table and make sure that all platform entries match the vessel's design
 vessel.platforms <- sort(unique(ship[which(ship$Ship_code==vessel),]$Platform))
 if(length(vessel.platforms)==1){
@@ -830,7 +832,16 @@ if(nrow(sightings[which(sightings$Method %in% c("RBFly_stand")),])!=0){
 if(nrow(sightings[which(sightings$Method %in% c("Fujinon_FranklinMI")),])!=0){
   sightings[which(sightings$Method%in% c("Fujinon_FranklinMI")),]$Platform <- "Fujinon_FranklinMI"
 }
-
+# for CharleyC
+if(nrow(sightings[which(sightings$Method %in% c("Fujinon_CharleyC")),])!=0){
+  sightings[which(sightings$Method%in% c("Fujinon_CharleyC")),]$Platform <- "Fujinon_CC"
+}# for GreatNorthern
+if(nrow(sightings[which(sightings$Method %in% c("Fujinon_GreatNorthern")),])!=0){
+  sightings[which(sightings$Method%in% c("Fujinon_GreatNorthern")),]$Platform <- "Fujinon_GN"
+}# for Franklin
+if(nrow(sightings[which(sightings$Method %in% c("Fujinon_TitanJunior")),])!=0){
+  sightings[which(sightings$Method%in% c("Fujinon_TitanJunior")),]$Platform <- "Fujinon_TJ"
+}
 
 #If there is a reported distance, change the defaulted method (originally Reticle Instrument) to NE
 if(sum(!is.na(sightings$Distance))!=0){
@@ -840,8 +851,8 @@ if(sum(!is.na(sightings$Distance))!=0){
 # unique(sightings$Platform)
 
 #Adjust Method entries so they will work with our pre-written functions ('Bi', 'BE', 'NE'):
-if(sum(sightings$Method %in% c("Fujinon_bridge", "Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_MBBridge", "Fujinon_RBbridge", "Fujinon_RBFly","Fujinon_VecBridge","Fujinon_TanuMonkey","Fujinon_TanuBridge", "Fujinon_FranklinMI"))!=0){
-  sightings[which(sightings$Method %in% c("Fujinon_bridge","Fujinon_MBbow", "Fujinon_MBBow", "Fujinon_MBBridge", "Fujinon_RBbridge", "Fujinon_RBFly", "Fujinon_VecBridge","Fujinon_TanuMonkey","Fujinon_TanuBridge", "Fujinon_FranklinMI")),]$Method <- "Bi"
+if(sum(sightings$Method %in% c("Fujinon_bridge", "Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_MBBridge", "Fujinon_RBbridge", "Fujinon_RBFly","Fujinon_VecBridge","Fujinon_TanuMonkey","Fujinon_TanuBridge", "Fujinon_FranklinMI","Fujinon_CharleyC"))!=0){
+  sightings[which(sightings$Method %in% c("Fujinon_bridge","Fujinon_MBbow", "Fujinon_MBBow", "Fujinon_MBBridge", "Fujinon_RBbridge", "Fujinon_RBFly", "Fujinon_VecBridge","Fujinon_TanuMonkey","Fujinon_TanuBridge", "Fujinon_FranklinMI","Fujinon_CharleyC")),]$Method <- "Bi"
 }
 
 
@@ -1316,7 +1327,7 @@ cat("\n\n\n Effort Table...")
 # }
 #Final Effort Table
 # write.table(Effort.Final,paste(getwd(),u,"OUTPUT FILES",u,"dataEffort table",u,"PRISMM_dataEffort",surveyID.abbrev, ".txt", sep = ""), sep="\t",row.names=F)
-write.table(Effort.Final,paste(getwd(),u,"OUTPUT FILES",u,"dataEffort table",u,"cemore_Effort_",year,"_",month,".txt", sep = ""), sep="\t",row.names=F)
+write.table(Effort.Final,paste(getwd(),u,"OUTPUT FILES",u,"dataEffort table",u,data.source,"_Effort_",year,"_",month,".txt", sep = ""), sep="\t",row.names=F)
 
 # cat(paste("\n Saved as: 'PRISMM_dataEffort",surveyID.abbrev, ".txt'", sep = ""))
 cat(paste("\n Saved as: 'CeMoRe_dataEffort",year,"_",month, ".txt'", sep = ""))
@@ -1381,7 +1392,7 @@ cat("\n\n\n Sightings Table...")
 #   file.remove(list.files(paste(getwd(),u,"OUTPUT FILES",u,"dataSightings table", sep=""), full.names = TRUE))
 # }
 # write.table(positions,paste(getwd(),u,"OUTPUT FILES",u,"dataSightings table",u,"PRISMM_dataSightings",surveyID.abbrev, ".txt", sep = ""), sep="\t",row.names=F)
-write.table(positions,paste(getwd(),u,"OUTPUT FILES",u,"dataSightings table",u,"cemore_Sightings_",year,"_",month, ".txt", sep = ""), sep="\t",row.names=F)
+write.table(positions,paste(getwd(),u,"OUTPUT FILES",u,"dataSightings table",u,data.source,"_Sightings_",year,"_",month, ".txt", sep = ""), sep="\t",row.names=F)
 cat(paste("\n Saved as: 'cemore_dataSightings",year,"_",month, ".txt'", sep = ""))
 
 
@@ -1397,7 +1408,7 @@ AP <- spTransform(AP, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0")
 #   file.remove(list.files(paste(getwd(),u,"OUTPUT FILES",u,"dataSightings_True Positions", sep=""), full.names = TRUE))
 # }
 
-writeOGR(AP, dsn = paste(getwd(),u,"OUTPUT FILES",u,"dataSightings_True Positions",u,"cemore_Sightings_truePositions_WGS84_UTM9N_",year,"_",month,".shp", sep=""), layer = paste("dataSightings",year,"_",month,"_truePositions_WGS84_UTM9N", sep = ""), driver = "ESRI Shapefile", overwrite_layer = T)
+writeOGR(AP, dsn = paste(getwd(),u,"OUTPUT FILES",u,"dataSightings_True Positions",u,data.source,"_Sightings_truePositions_WGS84_UTM9N_",year,"_",month,".shp", sep=""), layer = paste("dataSightings",year,"_",month,"_truePositions_WGS84_UTM9N", sep = ""), driver = "ESRI Shapefile", overwrite_layer = T)
 cat(paste("\n Saved as: 'cemore_Sightings_truePositions_WGS84_UTM9N'", sep = ""))
 
 cat(paste("\n\n\n******************************************************\n*** ",surveyid," CEMORE SURVEY DATA PROCESSING COMPLETE! ***\n****************************************************\n\n\n",sep=""))
