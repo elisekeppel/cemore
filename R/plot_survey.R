@@ -13,11 +13,12 @@ plot_survey <- function(data = ap_sf,
                         effort_data = effort_data,
                         effort_by_day = F,
                         effort_by_vis = F,
-                        show_transit = T,
+                        # show_transit = F,
 
                         N = F,
                         km = F,
                         depth = F,
+                        legend = T,
 
                         plot_sgt = T,
                         species = NULL,
@@ -28,6 +29,7 @@ plot_survey <- function(data = ap_sf,
 
                         monthly = F,
                         season=  F,
+                        seasonYear=F,
 
                         leg.pos = "bottom",
                         coord = NULL
@@ -49,7 +51,7 @@ plot_survey <- function(data = ap_sf,
     months <- month
   }
 
-  ap_sf <- data %>% dplyr::select(year,month,Species,Group_Size,season)
+  ap_sf <- data %>% dplyr::select(year,month,Species,Group_Size,season,seasonYear)
 
   # ----------------------------------------------------------------------
   # ----------------- LOAD SPATIAL FILES --------------------------------
@@ -155,11 +157,11 @@ plot_survey <- function(data = ap_sf,
         guides(colour = guide_legend(ncol=1,order = 3,override.aes = list(size=1),title.position="top")) + #
         ggnewscale::new_scale("colour")
     }
-    if(show_transit){
-      g <- g+ geom_sf(data = effort_data, size = 0.5, aes(linetype = status)) +
-        scale_linetype_manual(values=c("Survey effort"="solid", "In transit" = "dashed")) +
-        ggnewscale::new_scale("linetype")
-    }
+    # if(show_transit){
+    #   g <- g+ geom_sf(data = effort_data, size = 0.5, aes(linetype = status)) +
+    #     scale_linetype_manual(values=c("Survey effort"="solid", "In transit" = "dashed")) +
+    #     ggnewscale::new_scale("linetype")
+    # }
     # to size lines by vis
     if(effort_by_vis){
       effort_data <- effort_data %>%
@@ -225,54 +227,35 @@ plot_survey <- function(data = ap_sf,
   # ---------------------------------------------------------------------
   # ------------------------- TRACKS/EFFORT LABELS ----------------------
   # ---------------------------------------------------------------------
-  if(N & season){
-    tx <- effort_data %>% data.frame() %>%
-      group_by(season) %>%
-      dplyr::summarise(N = n_distinct(SurveyID))
-    g <- g+geom_text(data = tx, aes(x = -124.4, y = 48.9, label = paste0(N, " surveys")), size = 3)}
-  if(km & season){
-    tx2 <- effort_data %>% data.frame() %>%
-      mutate(length_km=st_length(geometry)) %>%
-      dplyr::group_by(season) %>%
-      # dplyr::summarise(dist = round(sum(length_km/1000),0))
+  if(N){
+    if(season & !seasonYear){
+      tx <- effort_data %>% data.frame() %>%
+        group_by(season)}
+    if(monthly){
+      tx <- effort_data %>% data.frame() %>%
+        group_by(month_abb)}
+    if(seasonYear){
+      tx <- effort_data %>% data.frame() %>%
+        group_by(season, year)}
 
-      # prettyNum(round(x,2),
-      #           big.mark=",")
-      dplyr::summarise(dist = prettyNum(round(sum(length_km/1000),0),
+    tx %<>% dplyr::summarise(N = n_distinct(SurveyID))
+    g <- g+geom_text(data = tx, aes(x = -124.35, y = 48.9, label = paste0(N, " surveys")), size = 3)
+    }
+
+  if(km){
+    if(season & !seasonYear){
+      tx2 <- effort_data %>% data.frame() %>%
+        dplyr::group_by(season)}
+    if(monthly){
+      tx2 <- effort_data %>% data.frame() %>%
+        dplyr::group_by(month_abb)}
+    if(seasonYear){
+      tx2 <- effort_data %>% data.frame() %>%
+        dplyr::group_by(season, year)}
+
+    tx2 %<>% dplyr::summarise(dist = prettyNum(round(sum(length_km),0),
                                         big.mark=","))
-
-    g <- g+geom_text(data = tx2, aes(x = -124.4, y = 48.8, label = paste0(dist, " km")), size = 3)}
-
-  if(N & monthly){
-    tx <- effort_data %>% data.frame() %>%
-      group_by(month_abb) %>%
-      dplyr::summarise(N = n_distinct(SurveyID))
-    g <- g+geom_text(data = tx, aes(x = -124.4, y = 48.9, label = paste0(N, " surveys")), size = 3)}
-  if(km & monthly){
-    tx2 <- effort_data %>% data.frame() %>%
-      mutate(length_km=st_length(geometry)/1000) %>%
-      dplyr::group_by(month_abb) %>%
-      # dplyr::summarise(dist = round(sum(length_km),0))
-
-      # prettyNum(round(x,2),
-      #           big.mark=",")
-      dplyr::summarise(dist = prettyNum(round(sum(length_km),0),
-                                        big.mark=","))
-
-    g <- g+geom_text(data = tx2, aes(x = -124.4, y = 48.8, label = paste0(dist, " km")), size = 3)}
-
-
-  # legacy from effort_only
-  # g <- g+ coord +
-  #   ylab(NULL)+xlab(NULL) +
-  #   theme(axis.text.x=element_text(angle=90),
-  #         axis.text = element_text(size=12),
-  #         plot.margin = unit(c(0,0,0,0), "cm"),
-  #         legend.title = element_blank(),
-  #         legend.text = element_text(),#size=fig_legend_size
-  #         legend.position="none") +
-  #   facet_wrap(~ month_abb, ncol=3)
-
+    g <- g+geom_text(data = tx2, aes(x = -124.35, y = 48.75, label = paste0(dist, " km")), size = 3)}
 
   # ----------------------------------------------------------------------
   # ----------------------------- SIGHTINGS ------------------------------
@@ -295,13 +278,14 @@ plot_survey <- function(data = ap_sf,
         mutate(month = month(date),
                lon = -(as.numeric(lon.deg) + as.numeric(lon.min)/60),
                lat = as.numeric(lat.deg) + as.numeric(lat.min)/60,
-               Group_Size = Best.Cnt, Group_Size = Best.Cnt,
+               Group_Size = Best.Cnt,
                season = factor(dplyr::case_when(
                  month %in% c(1:3) ~ "Winter",
                  month %in% c(4:6) ~ "Spring",
                  month %in% c(7:9) ~ "Summer",
                  month %in% c(10:12)  ~ "Fall"
-               ), levels = c("Winter", "Spring", "Summer", "Fall"))) %>%
+               ), levels = c("Winter", "Spring", "Summer", "Fall"))
+        ) %>%
         st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
         dplyr::select("Species","Group_Size", "season",geometry)
       if(!nrow(inc)<0) ap_sf <- bind_rows(ap_sf,inc)
@@ -365,9 +349,9 @@ plot_survey <- function(data = ap_sf,
     g <- g + geom_sf(data = ap_sf, alpha = 0.8, colour="black",stroke=0.2,
                      aes(fill = Species, shape = Species, size = Count)) +#
 
-      scale_size_manual(values = c(1.5,2.25,3),name="Group Size") +
-      scale_fill_manual(values = cols, breaks = sp, name = "Species")   +
-      scale_shape_manual(values = shape, breaks = sp, name = "Species") +
+      scale_size_manual(values = c(1,1.75,2.5), name="Group Size") +
+      scale_fill_manual(values = cols, breaks = sp, name = NULL)   +
+      scale_shape_manual(values = shape, breaks = sp, name = NULL) +
 
       guides(alpha= "none",
              shape = guide_legend(ncol=1,order = 1,override.aes = list(size=2),title.position = "top"),
@@ -398,24 +382,54 @@ plot_survey <- function(data = ap_sf,
   # ----------------------------------------------------------------------
   # ----------------------------- FINAL PLOT -----------------------------
   # ----------------------------------------------------------------------
-  if(season) g <- g + facet_wrap(~ season) #+ # guides(shape="none",fill="none",size="none")
-  # if(season & !is.null(species)) g <- g + #ggtitle(first_up(paste(species))) #
-  # + guides(size="none")
-  if(monthly) g <- g + facet_wrap(~ month_abb) #+ # guides(shape="none",fill="none",size="none")
-
   g <- g +
     theme(
       # plot.margin = unit(c(0,0,0,0), "cm"),
-      axis.text = element_text(size=9),
       axis.text.x = element_text(angle=90),
+      axis.text = element_text(size=9),
       legend.key = element_blank(),
       legend.position = leg.pos,
       legend.text = element_text(size=9),#size=fig_legend_size
+      legend.title = element_text(size=10), #change legend title font size
       legend.margin = margin(0)#,
       # legend.key.size = unit(0.1,"cm")
     ) +
     coord +
     ylab("")+xlab("")
+
+  if(season) g <- g + facet_wrap(~ season) #+ # guides(shape="none",fill="none",size="none")
+  # if(season & !is.null(species)) g <- g + #ggtitle(first_up(paste(species))) #
+  # + guides(size="none")
+  if(monthly) g <- g + facet_wrap(~ month_abb) #+ # guides(shape="none",fill="none",size="none")
+
+  if(!legend) g <- g + theme(legend.position = "none")
+
+    if(seasonYear) {
+    g <- g +
+      theme(axis.text.x = element_blank(),
+            axis.text = element_blank(),
+            axis.ticks.x = element_blank(),
+            axis.ticks.y = element_blank()) +
+      facet_grid(season ~ year)
+
+    # Get ggplot grob
+    g1 = ggplotGrob(g)
+    # g1$layout
+
+    # Remove the grobs
+    #  and the relevant row in the layout data frame needs to be removed
+    pos <- grepl(pattern = "panel-1-1", g1$layout$name)
+    g1$grobs <- g1$grobs[!pos]
+    g1$layout <- g1$layout[!pos, ]
+    pos <- grepl(pattern = "panel-2-1", g1$layout$name)
+    g1$grobs <- g1$grobs[!pos]
+    g1$layout <- g1$layout[!pos, ]
+
+    # # Draw the plot
+    grid.newpage()
+    grid.draw(g1)
+
+  }
 
   # TO ADD TITLE WHEN FILTERED BY SPECIES (NOT CURRENTLY NEEDED SINCE LEGEND)
   # if(!is.null(species)){
@@ -442,7 +456,9 @@ plot_survey <- function(data = ap_sf,
   if(depth){
     g <- cowplot::plot_grid(g, leg1, ncol = 1, rel_heights = c(1, .00001))}
 
-  if(Save){
+  if(!seasonYear) g
+
+  if(Save & !seasonYear){
     if(single_survey){
       if(is.null(file_name)) file_name <- paste0("C:/Users/keppele/Documents/CeMoRe/Analysis/cemore_analysis/output_maps/summary_map_",survey_title,".png")
     }else{
@@ -451,6 +467,8 @@ plot_survey <- function(data = ap_sf,
     ggsave(file_name, height = 15, width = 15, units = "cm")
   }
 
-  g
+  if(Save & seasonYear){
+    png(file_name);grid.newpage; grid.draw(g1); dev.off()}
+
 }
 
