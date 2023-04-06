@@ -1327,10 +1327,10 @@ cat("\n\n\n Effort Table...")
 # }
 #Final Effort Table
 # write.table(Effort.Final,paste(getwd(),u,"OUTPUT FILES",u,"dataEffort table",u,"PRISMM_dataEffort",surveyID.abbrev, ".txt", sep = ""), sep="\t",row.names=F)
-write.table(Effort.Final,paste(getwd(),u,"OUTPUT FILES",u,"dataEffort table",u,data.source,"_Effort_",year,"_",month,".txt", sep = ""), sep="\t",row.names=F)
+write.table(Effort.Final,paste(getwd(),u,paste0("OUTPUT FILES ",data.source),u,"dataEffort table",u,data.source,"_Effort_",year,"_",month,".txt", sep = ""), sep="\t",row.names=F)
 
 # cat(paste("\n Saved as: 'PRISMM_dataEffort",surveyID.abbrev, ".txt'", sep = ""))
-cat(paste("\n Saved as: 'CeMoRe_dataEffort",year,"_",month, ".txt'", sep = ""))
+cat(paste("\n Saved as: '",data.source,"_dataEffort",year,"_",month, ".txt'", sep = ""))
 
 
 #Export transit table for review
@@ -1392,8 +1392,8 @@ cat("\n\n\n Sightings Table...")
 #   file.remove(list.files(paste(getwd(),u,"OUTPUT FILES",u,"dataSightings table", sep=""), full.names = TRUE))
 # }
 # write.table(positions,paste(getwd(),u,"OUTPUT FILES",u,"dataSightings table",u,"PRISMM_dataSightings",surveyID.abbrev, ".txt", sep = ""), sep="\t",row.names=F)
-write.table(positions,paste(getwd(),u,"OUTPUT FILES",u,"dataSightings table",u,data.source,"_Sightings_",year,"_",month, ".txt", sep = ""), sep="\t",row.names=F)
-cat(paste("\n Saved as: 'cemore_dataSightings",year,"_",month, ".txt'", sep = ""))
+write.table(positions,paste(getwd(),u,paste0("OUTPUT FILES ",data.source),u,"dataSightings table",u,data.source,"_Sightings_",year,"_",month, ".txt", sep = ""), sep="\t",row.names=F)
+cat(paste("\n Saved as: '",data.source,"_dataSightings",year,"_",month, ".txt'", sep = ""))
 
 
 #Export Sightings shapefile
@@ -1408,8 +1408,8 @@ AP <- spTransform(AP, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0")
 #   file.remove(list.files(paste(getwd(),u,"OUTPUT FILES",u,"dataSightings_True Positions", sep=""), full.names = TRUE))
 # }
 
-writeOGR(AP, dsn = paste(getwd(),u,"OUTPUT FILES",u,"dataSightings_True Positions",u,data.source,"_Sightings_truePositions_WGS84_UTM9N_",year,"_",month,".shp", sep=""), layer = paste("dataSightings",year,"_",month,"_truePositions_WGS84_UTM9N", sep = ""), driver = "ESRI Shapefile", overwrite_layer = T)
-cat(paste("\n Saved as: 'cemore_Sightings_truePositions_WGS84_UTM9N'", sep = ""))
+writeOGR(AP, dsn = paste(getwd(),u,paste0("OUTPUT FILES ",data.source),u,"dataSightings_True Positions",u,data.source,"_Sightings_truePositions_WGS84_UTM9N_",year,"_",month,".shp", sep=""), layer = paste("dataSightings",year,"_",month,"_truePositions_WGS84_UTM9N", sep = ""), driver = "ESRI Shapefile", overwrite_layer = T)
+cat(paste("\n Saved as: '",data.source,"_Sightings_truePositions_WGS84_UTM9N'", sep = ""))
 
 cat(paste("\n\n\n******************************************************\n*** ",surveyid," CEMORE SURVEY DATA PROCESSING COMPLETE! ***\n****************************************************\n\n\n",sep=""))
 beep(8)
