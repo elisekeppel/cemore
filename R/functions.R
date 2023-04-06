@@ -212,9 +212,13 @@ plot_track <- function(transects, save = FALSE, coord = NULL){
 #' @export
 #'
 #' @examples data <- get_obs_data(data_folder = "sept2020/"); saveRDS(data, "survey_data/cemore_survey_data_oct2020.rds")
-get_obs_data <- function(year, month){
-  folder <- paste0(year, "-", month)
-  dir <- file.path("survey_data","raw_data",year,folder, "observations")
+get_obs_data <- function(year, month, data.source = "cemore", vessel = "MB"){
+
+  if(data.source == "cemore") main.dir <- "survey_data"
+  if(data.source == "mmcp") main.dir <- "mmcp_data"
+
+  folder <- paste0(year, "-", month,"/", vessel)
+  dir <- file.path(main.dir, "raw_data",year,folder, "observations")
   files <- list.files(dir)
 
   s <- list()
@@ -225,14 +229,15 @@ get_obs_data <- function(year, month){
       df <- data.frame(matrix(ncol = 1, nrow = 0))
       colnames(df) <- c('Porpoise.Behaviour')
       s[[i]] <- bind_rows(s[[i]],df) }
+
+    if(!is.null(s[[i]]$Porpoise.approaching)) s[[i]] %<>% dplyr::mutate(Porpoise.approaching = as.character(Porpoise.approaching))
+
     s[[i]] %<>%
       dplyr::rename(time_index = names(s[[i]][grep("Index", names(s[[i]]))]),
                     time_local = names(s[[i]][grep("local", names(s[[i]]))])) %>%
       dplyr::mutate(sighting_distance = ifelse(is.na(Sgt.Dist..m.), Distance..m., Sgt.Dist..m.),
                     time_index = lubridate::ymd_hms(time_index),
-                    time_local = lubridate::ymd_hms(time_local),
-                    Porpoise.approaching = as.character(Porpoise.approaching)
-      ) %>%
+                    time_local = lubridate::ymd_hms(time_local)) %>%
       dplyr::mutate_at(c('Photos', 'Incidental.Sighting', 'Sighting.Complete'), as.logical) %>%
       dplyr::mutate_at(c('Bearing', 'time_index', 'time_local', 'GPS.Pos', 'Sgt.Id', 'Horizon_Certainty',
                          'Reticle.Instr', 'Side', 'Obs', 'Species', 'Comments', 'Sgt.Pos', 'QA.QC.Comments','Porpoise.Behaviour'), as.character) %>%
@@ -309,8 +314,13 @@ get_obs_data <- function(year, month){
   df <- list(effort, sightings, multispecies, comments)
   names(df) <- c("effort", "sightings", "multispecies", "comments")
 
-  data_file <- file.path("survey_data","raw_data", "collated_rds", paste0("cemore_survey_raw_data_", year,"_", month, ".rds"))
-  saveRDS(df, data_file)
+  folder <- file.path(main.dir,"raw_data", "collated_rds")
+  if(!file.exists(folder)) dir.create(folder)
+
+  if(data.source == "cemore") data_file <- file.path(paste0("cemore_survey_raw_data_", year,"_", month, ".rds"))
+  if(data.source == "mmcp") data_file <- file.path(paste0("mmcp_survey_raw_data_", year,"_", month, ".rds"))
+
+  saveRDS(df, file.path(folder, data_file))
   cat("Saving raw data .rds file")
   df
 }
@@ -348,10 +358,11 @@ create_bb<- function(xmin, xmax, ymin, ymax){
 get_effort_lines <- function(effort){
   effort %<>%
     dplyr::filter(Status == "ON") %>%
-    dplyr::select(Vessel,date,year, month, month_abb, day,GpsT,transect_no, status,TransectID, Latitude, Longitude, ONSEQ_ID, SurveyID, season, CloudCover, Beaufort=Bf,Visibility=Port.Vis,
+    dplyr::select(Vessel,date,year, month, month_abb, day, GpsT, transect_no, status, TransectID, Latitude, Longitude, ONSEQ_ID, SurveyID, season, CloudCover, Beaufort=Bf,Visibility=Port.Vis,
                   Swell, Glare, Precip, Port.Obs, Stbd.Obs) %>%
-    # dplyr::mutate(Glare = ifelse(!Glare == "None", "y","n")) %>%
-    dplyr::mutate(date=lubridate::date(GpsT)) %>%
+    dplyr::mutate(date=lubridate::date(GpsT),
+                  seasonYear = paste0(tolower(season), year),
+                  seasonYear = factor(seasonYear, levels = unique(seasonYear))) %>%
     sf::st_as_sf(coords = c("Longitude", "Latitude"), crs = 4326) %>%
     dplyr::group_by(
       Vessel,
@@ -360,13 +371,13 @@ get_effort_lines <- function(effort){
       date,
       year, month, month_abb, day, transect_no,
                     TransectID
-                    , CloudCover, season, Beaufort,Visibility,
+                    , CloudCover, season, seasonYear, Beaufort, Visibility,
                     Swell, Glare, Precip, Port.Obs, Stbd.Obs,status
                     ) %>%
     dplyr::summarize(do_union=FALSE) %>%
     sf::st_cast("LINESTRING")
 
-  effort %>% arrange(date)
+  effort %>% arrange(date) %>% mutate(length = st_length(geometry), length_km = as.numeric(units::drop_units(length))/1000)
 }
 
 load_effort <- function(year, month, single_survey = T, vessel=NULL,dir=NULL){
