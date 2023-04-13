@@ -84,9 +84,9 @@ plot_survey <- function(data = ap_sf,
   #----------------------- BATHYMETRY ------------------------
   #-----------------------------------------------------------
   if(data.source=="cemore"){
-    bathy <- getNOAA.bathy(-125.7, -122.5,48, 49.5,res=1, keep=TRUE, path = "bath") %>% fortify(bathy)
+    bathy <- getNOAA.bathy(-125.7, -122.5,48, 49.5,res=1, keep=TRUE, path = "C:/Documents/CeMoRe/Analysis/cemore_analysis/bath") %>% fortify(bathy)
   }else{
-      bathy <- getNOAA.bathy(xmin, xmax, ymin, ymax, res=1, keep=TRUE, path="bath") %>% fortify(bathy)
+      bathy <- getNOAA.bathy(xmin, xmax, ymin, ymax, res=1, keep=TRUE, path= "C:/Documents/CeMoRe/Analysis/cemore_analysis/bath") %>% fortify(bathy)
     }
   bathy$z[which(bathy$z >= 0)] <- 0
   col <- rev(RColorBrewer::brewer.pal(9L, "Blues")[4:7])
