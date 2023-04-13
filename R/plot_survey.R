@@ -2,35 +2,30 @@
 plot_survey <- function(data = ap_sf,
                         Save = F,
                         file_name = NULL,
-
-                        bathy=NULL,
+                        xmin=NULL,
+                        xmax=NULL,
+                        ymin=NULL,
+                        ymax=NULL,
                         border = F,
                         single_survey=T,
-
                         badelf = NULL,
-
                         plot_effort = T, # T/F
                         effort_data = effort_data,
                         effort_by_day = F,
                         effort_by_vis = F,
                         # show_transit = F,
-
                         N = F,
                         km = F,
                         depth = F,
                         legend = T,
-
                         plot_sgt = T,
                         species = NULL,
                         incidentals = F,
                         incl_porps = F, # include hw and porps in incidentals
-
                         hydrophone = F,
-
                         monthly = F,
                         season=  F,
                         seasonYear=F,
-
                         leg.pos = "bottom",
                         coord = NULL
 ){
@@ -88,9 +83,11 @@ plot_survey <- function(data = ap_sf,
   #-----------------------------------------------------------
   #----------------------- BATHYMETRY ------------------------
   #-----------------------------------------------------------
-  if(is.null(bathy)){
-    bathy <- getNOAA.bathy(-125.7, -122.5,48, 49.5,res=1, keep=TRUE) %>%
-      fortify(bathy)}
+  if(data.source=="cemore"){
+    bathy <- getNOAA.bathy(-125.7, -122.5,48, 49.5,res=1, keep=TRUE, path = "bath") %>% fortify(bathy)
+  }else{
+      bathy <- getNOAA.bathy(xmin, xmax, ymin, ymax, res=1, keep=TRUE, path="bath") %>% fortify(bathy)
+    }
   bathy$z[which(bathy$z >= 0)] <- 0
   col <- rev(RColorBrewer::brewer.pal(9L, "Blues")[4:7])
   col_ramp <- colorRampPalette(col)
@@ -349,7 +346,7 @@ plot_survey <- function(data = ap_sf,
     g <- g + geom_sf(data = ap_sf, alpha = 0.8, colour="black",stroke=0.2,
                      aes(fill = Species, shape = Species, size = Count)) +#
 
-      scale_size_manual(values = c(1,1.75,2.5), name="Group Size") +
+      scale_size_manual(values = c(1.25,1.75,2.5), name="Group Size") +
       scale_fill_manual(values = cols, breaks = sp, name = NULL)   +
       scale_shape_manual(values = shape, breaks = sp, name = NULL) +
 
@@ -456,8 +453,6 @@ plot_survey <- function(data = ap_sf,
   if(depth){
     g <- cowplot::plot_grid(g, leg1, ncol = 1, rel_heights = c(1, .00001))}
 
-  if(!seasonYear) g
-
   if(Save & !seasonYear){
     if(single_survey){
       if(is.null(file_name)) file_name <- paste0("C:/Users/keppele/Documents/CeMoRe/Analysis/cemore_analysis/output_maps/summary_map_",survey_title,".png")
@@ -469,6 +464,8 @@ plot_survey <- function(data = ap_sf,
 
   if(Save & seasonYear){
     png(file_name);grid.newpage; grid.draw(g1); dev.off()}
+
+  if(!seasonYear) g
 
 }
 
