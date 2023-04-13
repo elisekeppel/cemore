@@ -54,7 +54,7 @@ plot_effort <- function(Save = F,
     #-----------------------------------------------------------
     # to create bathymetric layer and basemap
     #-----------------------------------------------------------
-    if(is.null(bathy)){bathy <- getNOAA.bathy(-125.7, -122.5,48, 49.5,res=1, keep=TRUE, path="C:/Documents/CeMoRe/Analysis/cemore_analysis/bath") %>%
+    if(is.null(bathy)){bathy <- getNOAA.bathy(-125.7, -122.5,48, 49.5,res=1, keep=TRUE, path="C:/Users/KeppelE/Documents/CeMoRe/Analysis/cemore_analysis/bath") %>%
       fortify(bathy)
     bathy$z[which(bathy$z >= 0)] <- 0
     col <- rev(RColorBrewer::brewer.pal(9L, "Blues")[4:7])
