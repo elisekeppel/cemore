@@ -12,10 +12,13 @@
 #' @examples
 #' ##Not run: combine_mysti_obs(year = 2021, month = "09",day = 20)
 #' ##End(Not run)
-combine_mysti_obs <- function(year, month, day){
-  dir = paste0("survey_data/raw_data/",year,"/",year,"-",month,"/observations/")
+combine_mysti_obs <- function(data.source = "cemore",year, month, day){
+  if(data.source == "cemore") main.dir <- "survey_data"
+  if(data.source == "mmcp") main.dir <- "mmcp_data"
+
+  dir = file.path(main.dir,"raw_data",year, paste0(year,"-",month),"observations")
   folder <- paste0("obs", year, "-", month, "-", day)
-  newdir <- paste0(dir, folder)
+  newdir <- file.path(dir, folder)
   if(!exists(newdir)) dir.create(newdir, showWarnings = F)
   file = list.files(paste0(newdir, "a"))
   # file = c("EffortEnv", "RF Sighting", "Sighting", "xMultiSpecies", "zComments")

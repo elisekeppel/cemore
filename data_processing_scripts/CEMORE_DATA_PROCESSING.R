@@ -96,7 +96,7 @@ if(exists("DST")){
 
 #Import GPS data
 cat("Importing GPS data... ")
-track.path <- paste(getwd(), u,main.dir,u, "tracklines",u, "transects", u, "csv",u, year, "-", month,sep="")
+track.path <- paste(getwd(), u,main.dir,u, "tracklines",u, "transects", u, "csv",u, year, "-", month,u,vessel,sep="")
 track.files <- list.files(track.path,include.dirs = FALSE,full.names = TRUE)
 track.list <- as.list(track.files)
 for(i in 1:length(track.list)) { #upload all GPS tables
@@ -851,8 +851,8 @@ if(sum(!is.na(sightings$Distance))!=0){
 # unique(sightings$Platform)
 
 #Adjust Method entries so they will work with our pre-written functions ('Bi', 'BE', 'NE'):
-if(sum(sightings$Method %in% c("Fujinon_bridge", "Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_MBBridge", "Fujinon_RBbridge", "Fujinon_RBFly","Fujinon_VecBridge","Fujinon_TanuMonkey","Fujinon_TanuBridge", "Fujinon_FranklinMI","Fujinon_CharleyC"))!=0){
-  sightings[which(sightings$Method %in% c("Fujinon_bridge","Fujinon_MBbow", "Fujinon_MBBow", "Fujinon_MBBridge", "Fujinon_RBbridge", "Fujinon_RBFly", "Fujinon_VecBridge","Fujinon_TanuMonkey","Fujinon_TanuBridge", "Fujinon_FranklinMI","Fujinon_CharleyC")),]$Method <- "Bi"
+if(sum(sightings$Method %in% c("Fujinon_bridge", "Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_MBBridge", "Fujinon_RBbridge", "Fujinon_RBFly","Fujinon_VecBridge","Fujinon_TanuMonkey","Fujinon_TanuBridge", "Fujinon_FranklinMI","Fujinon_CharleyC","Fujinon_GreatNorthern", "Fujinon_TitanJunior"))!=0){
+  sightings[which(sightings$Method %in% c("Fujinon_bridge","Fujinon_MBbow", "Fujinon_MBBow", "Fujinon_MBBridge", "Fujinon_RBbridge", "Fujinon_RBFly", "Fujinon_VecBridge","Fujinon_TanuMonkey","Fujinon_TanuBridge", "Fujinon_FranklinMI","Fujinon_CharleyC", "Fujinon_GreatNorthern", "Fujinon_TitanJunior")),]$Method <- "Bi"
 }
 
 
@@ -1327,10 +1327,9 @@ cat("\n\n\n Effort Table...")
 # }
 #Final Effort Table
 # write.table(Effort.Final,paste(getwd(),u,"OUTPUT FILES",u,"dataEffort table",u,"PRISMM_dataEffort",surveyID.abbrev, ".txt", sep = ""), sep="\t",row.names=F)
-write.table(Effort.Final,paste(getwd(),u,paste0("OUTPUT FILES ",data.source),u,"dataEffort table",u,data.source,"_Effort_",year,"_",month,".txt", sep = ""), sep="\t",row.names=F)
+write.table(Effort.Final,paste(getwd(),u,paste0("OUTPUT FILES ",data.source),u,"dataEffort table",u,data.source,"_Effort_",year,"_",month,"_",vessel,".txt", sep = ""), sep="\t",row.names=F)
 
-# cat(paste("\n Saved as: 'PRISMM_dataEffort",surveyID.abbrev, ".txt'", sep = ""))
-cat(paste("\n Saved as: '",data.source,"_dataEffort",year,"_",month, ".txt'", sep = ""))
+cat(paste("\n Saved as: '",data.source,"_dataEffort",year,"_",month,"_",vessel, ".txt'", sep = ""))
 
 
 #Export transit table for review
@@ -1392,8 +1391,8 @@ cat("\n\n\n Sightings Table...")
 #   file.remove(list.files(paste(getwd(),u,"OUTPUT FILES",u,"dataSightings table", sep=""), full.names = TRUE))
 # }
 # write.table(positions,paste(getwd(),u,"OUTPUT FILES",u,"dataSightings table",u,"PRISMM_dataSightings",surveyID.abbrev, ".txt", sep = ""), sep="\t",row.names=F)
-write.table(positions,paste(getwd(),u,paste0("OUTPUT FILES ",data.source),u,"dataSightings table",u,data.source,"_Sightings_",year,"_",month, ".txt", sep = ""), sep="\t",row.names=F)
-cat(paste("\n Saved as: '",data.source,"_dataSightings",year,"_",month, ".txt'", sep = ""))
+write.table(positions,paste(getwd(),u,paste0("OUTPUT FILES ",data.source),u,"dataSightings table",u,data.source,"_Sightings_",year,"_",month, "_", vessel,".txt", sep = ""), sep="\t",row.names=F)
+cat(paste("\n Saved as: '",data.source,"_dataSightings",year,"_",month, "_",vessel,".txt'", sep = ""))
 
 
 #Export Sightings shapefile
@@ -1408,7 +1407,7 @@ AP <- spTransform(AP, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0")
 #   file.remove(list.files(paste(getwd(),u,"OUTPUT FILES",u,"dataSightings_True Positions", sep=""), full.names = TRUE))
 # }
 
-writeOGR(AP, dsn = paste(getwd(),u,paste0("OUTPUT FILES ",data.source),u,"dataSightings_True Positions",u,data.source,"_Sightings_truePositions_WGS84_UTM9N_",year,"_",month,".shp", sep=""), layer = paste("dataSightings",year,"_",month,"_truePositions_WGS84_UTM9N", sep = ""), driver = "ESRI Shapefile", overwrite_layer = T)
+writeOGR(AP, dsn = paste(getwd(),u,paste0("OUTPUT FILES ",data.source),u,"dataSightings_True Positions",u,data.source,"_Sightings_truePositions_WGS84_UTM9N_",year,"_",month,"_",vessel,".shp", sep=""), layer = paste("dataSightings",year,"_",month,"_truePositions_WGS84_UTM9N_",vessel, sep = ""), driver = "ESRI Shapefile", overwrite_layer = T)
 cat(paste("\n Saved as: '",data.source,"_Sightings_truePositions_WGS84_UTM9N'", sep = ""))
 
 cat(paste("\n\n\n******************************************************\n*** ",surveyid," CEMORE SURVEY DATA PROCESSING COMPLETE! ***\n****************************************************\n\n\n",sep=""))

@@ -6,13 +6,44 @@
 # -------------------- DATA CORRECTIONS - BY MONTH ---------------------
 # ----------------------------------------------------------------------
 
-cat("Applying data corrections")
-#
-# if(year == 2023 & tolower(month_abb) == "feb"){
-#   data$effort[which(data$effort$PORT.Visibility == "Fair (CCG)"),]$PORT.Visibility <- "Moderate"
-#   data$effort[which(data$effort$STBD.Visibility == "Fair (CCG)"),]$STBD.Visibility <- "Moderate"
-# }
+if(year == 2022 & tolower(month_abb) == "jul" & vessel=="GN"){
+  data$effort[which(data$effort$Action ==""),]$Action <- "Weather update" # cannot have empty Action field - there was a comment aded after effort ended for day
+  data$sightings[which(data$sightings$Bearing %like% "N/A"),]$Bearing <- "" # cannot have NA in bearing field
+}
 
+if(year == 2022 & tolower(month_abb) == "aug" & vessel=="GN"){
+  data$effort[which(data$effort$time_index =="2022-08-05T08:46:17.5"),]$time_local <- "2022-08-05T08:46:17.5" # time_index and time_local off by a few milliseconds
+  data$effort[which(data$effort$time_index =="2022-08-05T12:01:04.3"),]$time_local <- "2022-08-05T12:01:04.3" # time_index and time_local off by a few milliseconds
+  data$effort[which(data$effort$time_index =="2022-08-11T11:57:27.0"),]$time_local <- "2022-08-11T11:57:27.0" # time_index and time_local off by a few milliseconds
+  data$effort[which(data$effort$time_index =="2022-08-11T14:08:56.6"),]$time_local <- "2022-08-11T14:08:56.6" # time_index and time_local off by a few milliseconds
+
+  data$effort[which(data$effort$time_index =="2022-08-05T15:42:32.6"),]$time_local <- "2022-08-05T15:41:32.6" # effort ended sooner as evident by slowed ship speed
+  data$effort[which(data$effort$time_index =="2022-08-05T15:42:32.6"),]$time_index <- "2022-08-05T15:41:32.6" # effort ended sooner as evident by slowed ship speed
+
+  data$sightings[which(data$sightings$Sgt.Id == "S12"),]$Reticle.Instr <-  "Fujinon_GreatNorthern" # incidental sgt's with no ret instr
+  data$sightings[which(data$sightings$Sgt.Id == "S13"),]$Reticle.Instr <-  "Fujinon_GreatNorthern" # incidental sgt's with no ret instr
+}
+if(year == 2022 & tolower(month_abb) == "aug" & vessel=="CC"){
+  data$effort[which(data$effort$time_index =="2022-08-11T11:07:09.4"),]$time_local <- "2022-08-11T11:07:09.4" # time_index and time_local off by a few milliseconds
+  data$effort[which(data$effort$time_index =="2022-08-11T14:56:40.3"),]$time_local <- "2022-08-11T14:56:40.3" # time_index and time_local off by a few milliseconds
+  data$effort[which(data$effort$Action ==""),]$Action <- "Weather update" # cannot have empty Action field - there was a comment aded after effort ended for day
+  data$effort[which(data$effort$time_index =="2022-08-11T14:56:40.3"),]$time_local <- "2022-08-11T14:45:52.3" # effort ended sooner as evident by slowed ship speed
+  data$effort[which(data$effort$time_index =="2022-08-11T14:56:40.3"),]$time_index <- "2022-08-11T14:45:52.3" # effort ended sooner as evident by slowed ship speed
+
+  data$sightings[which(data$sightings$Sgt.Id == "S28"),]$Incidental.Sighting <-  T
+
+}
+
+if(year == 2022 & tolower(month_abb) == "sep" & vessel=="GN"){
+  data$effort[which(data$effort$time_index =="2022-09-17T11:52:45.2"),]$time_local <- "2022-09-17T11:52:45.2" # time_index and time_local off by a few milliseconds
+  data$effort[which(data$effort$Action ==""),]$Action <- "Weather update" # cannot have empty Action field - there was a comment aded after effort ended for day
+}
+if(year == 2022 & tolower(month_abb) == "sep" & vessel=="TJ"){
+  data$effort[which(data$effort$time_index =="2022-09-17T13:50:34.8"),]$time_local <- "2022-09-17T13:50:34.8" # time_index and time_local off by a few milliseconds
+  data$sightings[which(is.na(data$sightings$Reticle.Instr)),]$Reticle.Instr <-  "Fujinon_TitanJunior" # incidental sgt's with no ret instr
+}
+
+cat("Applying data corrections")
 
 # ----------------------------------------------------------------------
 # ---------- SAVE TIDY, COLLATED DATA FOR INPUT TO EVA'S CODE ----------
