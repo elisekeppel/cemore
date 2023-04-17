@@ -214,10 +214,15 @@ plot_track <- function(transects, save = FALSE, coord = NULL){
 #' @examples data <- get_obs_data(data_folder = "sept2020/"); saveRDS(data, "survey_data/cemore_survey_data_oct2020.rds")
 get_obs_data <- function(year, month, data.source = "cemore", vessel = "MB"){
 
-  if(data.source == "cemore") main.dir <- "survey_data"
-  if(data.source == "mmcp") main.dir <- "mmcp_data"
+  if(data.source == "cemore") {
+    main.dir <- "survey_data"
+    folder <- paste0(year, "-", month,"/")
+  }
+  if(data.source == "mmcp") {
+    main.dir <- "mmcp_data"
+    folder <- paste0(year, "-", month,"/", vessel)
+  }
 
-  folder <- paste0(year, "-", month,"/", vessel)
   dir <- file.path(main.dir, "raw_data",year,folder, "observations")
   files <- list.files(dir)
 
@@ -383,7 +388,11 @@ get_effort_lines <- function(effort){
 load_effort <- function(year, month, single_survey = T, vessel=NULL,dir=NULL,data.source = "cemore"){
   if(is.null(dir)){dir <- file.path("C:/Users/KeppelE/Documents/CeMoRe/Analysis/cemore_analysis",paste0("OUTPUT FILES ",data.source),"dataEffort table")}else{dir=dir}
   if(single_survey){
-    effort <- read.delim(file.path(dir, paste0(data.source,"_Effort_", year,"_",month,"_",vessel,".txt")))
+    if(data.source=="cemore"){
+      effort <- read.delim(file.path(dir, paste0(data.source,"_Effort_", year,"_",month,".txt")))
+    }else{
+      effort <- read.delim(file.path(dir, paste0(data.source,"_Effort_", year,"_",month,"_",vessel,".txt")))
+    }
   }else{
     effort_files <- list.files(dir)
     effort <- purrr::map_df(file.path(dir, effort_files), read.delim)
@@ -399,10 +408,9 @@ load_effort <- function(year, month, single_survey = T, vessel=NULL,dir=NULL,dat
                               month %in% c(7:9) ~ "Summer",
                               month %in% c(10:12)  ~ "Fall"
                             ), levels = c("Winter", "Spring", "Summer", "Fall")),
-                            transect_no = Raw.T.ID, #as.numeric(gsub("SurveyID", "", Final.T.ID)),
+                            transect_no = as.numeric(str_remove_all(Final.T.ID,SurveyID)), #, #Raw.T.ID
                             status = ifelse(transect_no <100,"On Effort","In Transit")) %>%
-    dplyr::rename(TransectID=Final.T.ID)
-
+    dplyr::mutate(TransectID=Final.T.ID) #paste(SurveyID,transect_no, sep="_"))
   if(!is.null(vessel)) effort %<>% filter(Vessel == vessel)
 
   if(length(effort$month_abb[which(effort$month_abb == "Aug" & effort$year == 2020)])>0){
@@ -418,9 +426,15 @@ load_sightings <- function(year, month, single_survey = T, vessel=NULL,dir=NULL,
   if(is.null(dir)){dir <- paste0("C:/Users/keppele/Documents/CeMoRe/Analysis/cemore_analysis/OUTPUT FILES ", data.source,"/dataSightings_True Positions")}else{dir=dir}
   month_abb <- month.abb[as.numeric(month)]
   if(single_survey){
-    AP <- rgdal::readOGR(file.path(dir, paste0(data.source,"_Sightings", "_truePositions_WGS84_UTM9N_",year,"_", month,"_",vessel,".shp")), verbose = F)
-  }else{
-    files <- list.files(path = dir, pattern = "\\.shp$")
+    if(data.source=="cemore"){
+    AP <- rgdal::readOGR(file.path(dir, paste0(data.source,"_Sightings", "_truePositions_WGS84_UTM9N_",year,"_", month,".shp")), verbose = F)
+    }else{AP <- rgdal::readOGR(file.path(dir, paste0(data.source,"_Sightings", "_truePositions_WGS84_UTM9N_",year,"_", month,"_",vessel,".shp")), verbose = F)
+  }
+    }else{
+      if(data.source=="cemore"){
+        files <- list.files(path = dir, pattern = "\\.shp$")
+    }else{files <- list.files(path = dir, pattern = "\\.shp$")
+    }
     AP <- purrr::map(file.path(dir,files), rgdal::readOGR, verbose = F)
     AP <- do.call(rbind, AP)
     survey_title <- paste0("All CeMoRe surveys from Sep 2020 - ", survey_title)
@@ -432,7 +446,8 @@ load_sightings <- function(year, month, single_survey = T, vessel=NULL,dir=NULL,
     dplyr::filter(!is.na(PSD_nm), !SightedBy=="SHrushowy") %>%
     dplyr::rename(Observer=SightedBy) %>%
     dplyr::mutate() %>%
-    dplyr::transmute(SurveyID, Vessel=vessel,
+    dplyr::transmute(SurveyID,
+                     Vessel=vessel,
                      date = lubridate::date(time_index),
                      year = lubridate::year(time_index), month = lubridate::month(time_index),
                      month_abb = factor(month.abb[month], levels = month.abb[1:12]),
