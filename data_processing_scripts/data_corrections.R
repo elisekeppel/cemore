@@ -41,8 +41,9 @@ if(year == 2020 & tolower(month_abb) == "sep"){
   data$sightings <- data$sightings %>% filter(!Incidental.Sighting == F | !is.na(Bearing),
                                               !is.na(Reticles) | !is.na(Distance..m.), as.character(date) %in% c("2020-09-02", "2020-09-03", "2020-09-10", "2020-09-13", "2020-08-28"))
   data$effort <- data$effort %>% filter(as.character(date(time_index)) %in% c("2020-09-02", "2020-09-03", "2020-09-10", "2020-09-13", "2020-08-28"))
-  # data$effort$Transect.ID <- NA
-  # data$effort[which(data$effort$Status == "ON EFFORT"),]$Transect.ID <- 1
+  data$effort[which(data$effort$time_index == "2020-08-28T12:17:31.7"),]$Action <-  "Weather update"
+  data$effort[which(data$effort$time_index == "2020-08-28T12:17:31.7"),]$Action <-  "Weather update"
+
   data$effort[which(lubridate::ymd_hms(data$effort$time_local) %>% substr(12,16) == "15:46"),]$PORT.Observer <- "CMcMillan"
   data$effort[which(lubridate::ymd_hms(data$effort$time_local) %>% substr(12,16) == "15:46"),]$STBD.Observer <- "LSpaven"
   data$effort[which(lubridate::ymd_hms(data$effort$time_local) %>% substr(12,16) == "15:46"),]$PORT.Visibility <- "Excellent/Good"
@@ -60,24 +61,15 @@ if(year == 2020 & tolower(month_abb) == "sep"){
   data$effort[which(lubridate::ymd_hms(data$effort$time_index) %>% substr(12,16) == "12:21"),]$time_index <- "2020-09-10 12:16:21"
   data$effort[which(lubridate::ymd_hms(data$effort$time_local) %>% substr(12,16) == "09:14"),]$time_local <- "2020-09-10 09:13:56"
   data$effort[which(lubridate::ymd_hms(data$effort$time_index) %>% substr(12,16) == "09:14"),]$time_index <- "2020-09-10 09:13:56"
-  data$effort[which(data$effort$Platform == "Fujinon_RBbridge"),]$Platform <- "Fujinon_MBbow"
-
-
+  data$effort$Platform <- "Fujinon_MBbow"
 
   # data$sightings[which(as.character(date(time_index) == "2020-09-13" & Sgt.Id %in% c(S3)))]
   data$sightings[which(as.character(date(data$sightings$time_index)) == "2020-09-03" & data$sightings$Sgt.Id == 'S51'),]$Bearing <- '0l'
-  # data$sightings[which(as.character(date(data$sightings$time_index)) == "2020-09-03" & data$sightings$Sgt.Id == 'S19'),]$Distance..m. <- 200
-  # data$sightings[which(as.character(date(data$sightings$time_index)) == "2020-09-03" & data$sightings$Sgt.Id == 'S19'),]$sighting_distance <- 200
-  # data$sightings[which(as.character(date(data$sightings$time_index)) == "2020-09-03" & data$sightings$Sgt.Id == 'S19'),]$Reticles <- NA
   data$sightings[which(as.character(date(data$sightings$time_index)) == "2020-09-13" & data$sightings$Sgt.Id %in% c("S5", "S6", "S7", "S8")),]$Incidental.Sighting <- T
-
+  data$sightings$Reticle.Instr <- "Fujinon_MBbow"
 }
 
 if(year == 2020 & tolower(month_abb) == "oct"){
-  # data$effort$Transect.ID <- c(NA,1,NA,2,2,NA,NA,3,3,3,NA,4,4,4,NA,5,NA,6,6,6,NA,7,7,7,NA,8,8,8,NA,9,NA,10,NA,NA,11,11,NA,12,NA,13,13,NA,14,14,14,NA,
-  #                              15,15,NA,16,NA,17,17,17,NA,18,18,18,NA,19,NA,20,NA,NA,21,NA,22,NA,23,23,NA,24,NA,25,25,NA,26,NA,27,NA,NA,28,NA,
-  #                              29,NA,30,30,NA,31,NA,32,NA,33,NA)
-
   #--------------------------
   # add in Transect.ID
   ind <- which(with(data$effort, c(FALSE, Status[-1L] != Status[-length(Status)]))) #each time Status switches
