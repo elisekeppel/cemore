@@ -4,13 +4,10 @@
 \alias{get_obs_data}
 \title{get_obs_data}
 \usage{
-get_obs_data(data_folder = NULL)
+get_obs_data(year, month, data.source = "cemore", vessel = "MB")
 }
 \arguments{
 \item{data_folder}{}
-}
-\value{
-
 }
 \description{
 get_obs_data

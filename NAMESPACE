@@ -3,6 +3,7 @@
 export(combine_mysti_obs)
 export(combine_mysti_tracks)
 export(create_bb)
+export(first_up)
 export(get_effort_lines)
 export(get_lines)
 export(get_obs_data)

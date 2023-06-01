@@ -9,9 +9,6 @@ get_effort_lines(effort)
 \arguments{
 \item{effort}{}
 }
-\value{
-
-}
 \description{
 get_effort_lines
 }

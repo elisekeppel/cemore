@@ -10,9 +10,6 @@ combine_mysti_tracks(year, month, day)
 \arguments{
 \item{day}{}
 }
-\value{
-
-}
 \description{
 Combine mysticetus tracks
 Combine mysticetus tracklines for multiple days over a survey

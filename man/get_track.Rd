@@ -3,31 +3,26 @@
 \name{get_track}
 \alias{get_track}
 \title{get_track
-Get survey trackline for one day. Used with purrr::map to import data from
-all tracklines (mysticetus .csv files) from all days of a survey
-Reads in survey trackline data (as .gpx from Bad Elf or .csv from
-Mysticetus) and formats as LINESTRING}
+Get survey trackline for one day (pre-processed data). Used with
+purrr::map to import data from all tracklines (mysticetus .csv files)
+from all days of a survey. Reads in survey trackline data (as .gpx from
+Bad Elf or .csv from Mysticetus) and formats as LINESTRING.}
 \usage{
 get_track(file_name, dir = NULL, year, month)
 }
 \arguments{
 \item{file_name}{Name of gpx or csv trackline file}
-
-\item{folder}{Folder name ie.}
-}
-\value{
-
 }
 \description{
 get_track
-Get survey trackline for one day. Used with purrr::map to import data from
-all tracklines (mysticetus .csv files) from all days of a survey
-Reads in survey trackline data (as .gpx from Bad Elf or .csv from
-Mysticetus) and formats as LINESTRING
+Get survey trackline for one day (pre-processed data). Used with
+purrr::map to import data from all tracklines (mysticetus .csv files)
+from all days of a survey. Reads in survey trackline data (as .gpx from
+Bad Elf or .csv from Mysticetus) and formats as LINESTRING.
 }
 \examples{
 test <- get_track(file_name = "Track CeMoRe vessel  Started at 20210920 0903435 PDT CeMoRe vessel.csv", year = 2021, month = "09")
 transect_dir <- "./survey_data/tracklines/transects/gpx/2021-08/"
 files <- list.files(transect_dir)
-transects_sept <- purrr::map_df(files, get_track, year = 2021, month = "08")
+transects_sept <- purrr::map_df(files, get_track, year = 2021, month = "09")
 }

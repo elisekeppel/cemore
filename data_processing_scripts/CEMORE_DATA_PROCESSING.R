@@ -381,7 +381,7 @@ if(sum(is.na(survey$Date_Start_GMT))==nrow(survey) | sum(is.na(survey$Date_End_G
   #beep(10)
   stop("Oops! The Date and Time format in the dataSurveyID table is not correct. Make sure that the Regional settings on your computer have 'short date' format set to yyyy-MM-dd and 'long time' format set as HH:mm:ss, re-save the dataSurveyID table, and re-run this code.", call. = FALSE)
 }
-
+surveyid <- paste0(surveyid, "_", vessel)
 #Rename field names (to be consistent with previous survey data) # EK edit
 #----------------------------------------------------------------
 names(effort) <- c("time_index","time_local","Action","Status","Transect.ID","Platform","Franklin.Hut","Port.Observer","Starboard.Observer","Effort_Instrument","DataRecorder","PORT.Visibility","Beaufort","STBD.Visibility","Swell","Glare","Left.Glare.Limit","Right.Glare.Limit","Cloud.Cover","Precipitation","Comments","Locked.from.Editing","QAQC_Comments","GPSIndex")
@@ -396,7 +396,7 @@ cat("\n-------------------------------------\n\n")
 #SURVEY ID TABLE
 #Make sure there is a record for the survey
 if(nrow(survey[which(survey$SurveyID %in% surveyid),])!=1){
-  if(nrow(survey[which(survey$SurveyID %in% surveyid),]==0)){
+  if(nrow(survey[which(survey$SurveyID %in% surveyid),])==0){
     ##beep(10)
     stop(paste("Oops! There are no records for", surveyid, "in the SurveyID table. Please ensure there is a record for each survey in this table and run this code again.", sep = " "), call. = FALSE)
   } else {
@@ -1221,23 +1221,35 @@ cat("\n\nMaking sure trackline doesn't intercept land (this may take several min
 # load land shapefile
 #-------- EK edit (for diff shapefile, and using sf instead of sp---------------
 if(!exists("bc_coast")){
-  bc_coast <- readOGR("C:\\Users\\keppele\\Documents\\ArcGIS\\basemaps\\CoastLand.shp", verbose = FALSE) #Load in CHS coastline shapefile (in WGS84)
-  bc_coast <- spTransform(bc_coast, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0")
+  # bc_coast <- readOGR("C:\\Users\\keppele\\Documents\\ArcGIS\\basemaps\\CoastLand.shp", verbose = FALSE) #Load in CHS coastline shapefile (in WGS84)
+  # bc_coast <- sf::st_read(dsn="C:\\Users\\keppele\\Documents\\ArcGIS\\basemaps\\CoastLand.shp") %>%
+  # st_as_sf() %>%
+  #   st_transform(crs = 4326) #Load in CHS coastline shapefile (in WGS84)
+  # bc_coast <- st_transform(bc_coast, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0")
+  # EK edit: change to using sf package
+  bc_coast <- sf::st_read(dsn="C:\\Users\\keppele\\Documents\\ArcGIS\\basemaps\\CoastLand.shp") %>%
+    st_transform(crs = 3005) %>% dplyr::select(geometry)
 }
 cat("\n - Land shapefile loaded")
 #Make trackpoints
-BP <- SpatialPointsDataFrame(cbind(effort$Longitude,effort$Latitude), data=effort, proj4string=CRS("+proj=longlat"))
-BP <- spTransform(BP, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0")
+# BP <- SpatialPointsDataFrame(cbind(effort$Longitude,effort$Latitude), data=effort, proj4string=CRS("+proj=longlat"))
+# BP <- spTransform(BP, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0")
+# EK edit: change to using sf package
+BP <- st_as_sf(effort, coords = c("Longitude","Latitude"),crs=4326) %>%
+  st_transform(BP, crs=3005)
 
 cat("\n - Track points constructed")
 #Clip land by extent of trackpoints
 if(!exists("bc_clip")){
-  bc_clip <- gClip(bc_coast,BP)
+  # bc_clip <- gClip(bc_coast,BP)
+  bc_clip <- st_crop(bc_coast, BP)
 }
 cat("\n - Land extent clipped")
 #Find any points that fall on land
 LAND <- BP[bc_clip,]
-if(nrow(LAND@data[which(LAND@data$Status!="OFF"),])!=0){
+# if(nrow(LAND@data[which(LAND@data$Status!="OFF"),])!=0){
+# EK edit : edited for sf functionality as no longer an S4 object
+if(nrow(LAND[which(LAND$Status!="OFF"),])!=0){
 
   beep(10)
   stop(paste("\nOops! Some points from our GPS track fall on land. Time Created (UTC): ", toString(as.character(LAND@data$GpsTime.UTC)), "Please adjust these positions in the GPS Data table and re-run this code.", sep = ""), call. = FALSE)
@@ -1415,21 +1427,43 @@ if(data.source=="mmcp"){
 #---------------------------------
 cat("\n\n\n Sightings Corrected Position Shapefile...")
 #Export shapefile (true positions):
-AP <- SpatialPointsDataFrame(cbind(positions$"final.lon",positions$final.lat), data=positions, proj4string=CRS("+proj=longlat"))
+# EK edit: writeOGR deprecated, switch to st_write which has more restrictions on field types and length of file/field names, etc.
+AP <- SpatialPointsDataFrame(cbind(positions$"final.lon",positions$final.lat), data=positions, proj4string=CRS("+proj=longlat")) %>%
+  st_as_sf() %>% st_transform(crs=4326)
+AP <- AP %>% mutate(gpsdate=date(gpstimeutc),
+                    gpstime=paste(hour(gpstimeutc),minute(gpstimeutc),second(gpstimeutc),sep="_"),
+                    tind_date=date(time_index),
+                    tind_time=paste(hour(time_index),minute(time_index),second(time_index),sep="_"),
+                    sid=substr(SurveyID,8,17)) %>%
+  select(-c(SurveyID, gpstimeutc, time_index))
 # AP <- spTransform(AP, CRSobj = proj4string(bc_coast))
-AP <- spTransform(AP, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0")
+# AP <- spTransform(AP, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0")
 #Remove files already present in the export folder
 # if(length(list.files(paste(getwd(),u,"OUTPUT FILES",u,"dataSightings_True Positions", sep=""), full.names = TRUE))!=0){
 #   file.remove(list.files(paste(getwd(),u,"OUTPUT FILES",u,"dataSightings_True Positions", sep=""), full.names = TRUE))
 # }
 
+# if(data.source=="cemore"){
+#   # writeOGR(AP, dsn = paste(getwd(),u,paste0("OUTPUT FILES ",data.source),u,"dataSightings_True Positions",u,data.source,"_Sightings_truePositions_WGS84_UTM9N_",year,"_",month,".shp", sep=""), layer = paste("dataSightings",year,"_",month,"_truePositions_WGS84_UTM9N_",vessel, sep = ""), driver = "ESRI Shapefile", overwrite_layer = T)
+#   st_write(paste(getwd(), u,
+#   paste0("OUTPUT FILES ",data.source), u,
+#   "dataSightings_True Positions", u,
+#   data.source,"_Sightings_truePositions_WGS84_UTM9N_",year,"_",month,".shp", sep=""), append=F)}
+# if(!data.source=="cemore"){
+#   st_write(AP, dsn = paste(getwd(),u,paste0("OUTPUT FILES ",data.source),u,"dataSightings_True Positions",u,data.source,"_Sightings_truePositions_WGS84_UTM9N_",year,"_",month,"_",vessel,".shp", sep=""), driver = "ESRI Shapefile")
+# }
 if(data.source=="cemore"){
-  writeOGR(AP, dsn = paste(getwd(),u,paste0("OUTPUT FILES ",data.source),u,"dataSightings_True Positions",u,data.source,"_Sightings_truePositions_WGS84_UTM9N_",year,"_",month,".shp", sep=""), layer = paste("dataSightings",year,"_",month,"_truePositions_WGS84_UTM9N_",vessel, sep = ""), driver = "ESRI Shapefile", overwrite_layer = T)
+  # writeOGR(AP, dsn = paste(getwd(),u,paste0("OUTPUT FILES ",data.source),u,"dataSightings_True Positions",u,data.source,"_Sightings_truePositions_WGS84_UTM9N_",year,"_",month,".shp", sep=""), layer = paste("dataSightings",year,"_",month,"_truePositions_WGS84_UTM9N_",vessel, sep = ""), driver = "ESRI Shapefile", overwrite_layer = T)
+  # st_write(AP, dsn="OUTPUT FILES cemore/TEST.shp", driver="ESRI Shapefile",append=F)
+  file.name <- paste0("OUTPUT FILES cemore/dataSightings_True Positions/cemore_WGS84_UTM9N_",year,"_",month,".shp") #prev file name format too long
+  st_write(AP, dsn=file.name, driver="ESRI Shapefile",append=F)
 }
-if(data.source=="cemore"){
-  writeOGR(AP, dsn = paste(getwd(),u,paste0("OUTPUT FILES ",data.source),u,"dataSightings_True Positions",u,data.source,"_Sightings_truePositions_WGS84_UTM9N_",year,"_",month,"_",vessel,".shp", sep=""), layer = paste("dataSightings",year,"_",month,"_truePositions_WGS84_UTM9N_",vessel, sep = ""), driver = "ESRI Shapefile", overwrite_layer = T)
+if(!data.source=="cemore"){
+  # writeOGR(AP, dsn = paste(getwd(),u,paste0("OUTPUT FILES ",data.source),u,"dataSightings_True Positions",u,data.source,"_Sightings_truePositions_WGS84_UTM9N_",year,"_",month,"_",vessel,".shp", sep=""), layer = paste("dataSightings",year,"_",month,"_truePositions_WGS84_UTM9N_",vessel, sep = ""), driver = "ESRI Shapefile", overwrite_layer = T)
+  st_write(AP, dsn=paste0("OUTPUT FILES ", data.source, "/dataSightings_True Positions/", data.source,"_Sightings_truePositions_WGS84_UTM9N_",year,"_",month,"_",vessel,".shp"), driver="ESRI Shapefile",append=F)
 }
-cat(paste("\n Saved as: '",data.source,"_Sightings_truePositions_WGS84_UTM9N'", sep = ""))
+
+cat(paste("\n Saved in: '",data.source,"_Sightings_truePositions_WGS84_UTM9N'", sep = ""))
 
 cat(paste("\n\n\n******************************************************\n*** ",surveyid," CEMORE SURVEY DATA PROCESSING COMPLETE! ***\n****************************************************\n\n\n",sep=""))
 beep(8)

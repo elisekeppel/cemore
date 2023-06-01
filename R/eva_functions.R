@@ -128,21 +128,32 @@ PosDist <- function(Lat1,Lon1,Lat2,Lon2){
 
 #Clipping polygons
 gClip <- function(shp, bb){
-  if(class(bb) == "matrix"){
-    b_poly <- as(extent(as.vector(t(bb))), "SpatialPolygons")
-    proj4string(b_poly) <- proj4string(shp)
-  } else {
-    b_poly <- as(extent(bb), "SpatialPolygons")
-    # proj4string(b_poly) <- proj4string(bb)
-    proj4string(b_poly) <- "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0"
-  }
+  #---------------
+  #This bit no longer needed in sf with st_crop
+  #---------------
+  # if(class(bb) == "matrix"){
+  #   b_poly <- as(raster::extent(as.vector(t(bb))), "SpatialPolygons")
+  #   proj4string(b_poly) <- proj4string(shp)
+  # } else {
+    # b_poly <- as(raster::extent(bb), "SpatialPolygons")
+  #   # proj4string(b_poly) <- proj4string(bb)
+  #   proj4string(b_poly) <- "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0"
+  # }
+  #---------------
   # if(proj4string(shp)!=proj4string(b_poly)){
   # b_poly <- spTransform(b_poly, CRSobj = proj4string(bb))
   # b_poly <- spTransform(b_poly, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0")
   # }
-  shp <- rgeos::gBuffer(shp, byid=TRUE, width=0) # to fix Ring self-intersection
-  b_poly <- rgeos::gBuffer(b_poly, byid=TRUE, width=0)
-  rgeos::gIntersection(shp, b_poly, byid = TRUE)
+  #---------------
+  # change to sf
+  #---------------
+  # shp <- rgeos::gBuffer(shp, byid=TRUE, width=0) # to fix Ring self-intersection
+  # b_poly <- rgeos::gBuffer(b_poly, byid=TRUE, width=0)
+  # rgeos::gIntersection(shp, b_poly, byid = TRUE)
+  #---------------
+  # shp <- sf::st_buffer(shp, dist=0) # to fix Ring self-intersection
+  # b_poly <- sf::st_buffer(bb, dist=0)
+  st_crop(shp, bb)
 }
 
 #Find non-numeric values

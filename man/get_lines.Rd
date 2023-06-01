@@ -10,10 +10,7 @@ linestring object. Used with tidy_transects() to import multiple lines in
 get_lines(x)
 }
 \arguments{
-\item{x}{}
-}
-\value{
-
+\item{x}{a list of survey transect lines imported from a .gpx file (readGPX()).}
 }
 \description{
 get_lines

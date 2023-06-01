@@ -5,13 +5,15 @@
 \title{Tidy transects
 Read in gpx file of planned survey transects (as either route or track) and convert to sf LINESTRING object}
 \usage{
-tidy_transects(file_name, dir = NULL, iteration, route = TRUE)
+tidy_transects(
+  file_name,
+  dir = NULL,
+  type = "route",
+  depth_cutoff_object = NULL
+)
 }
 \arguments{
 \item{route}{true/false whether the object is a route (= linestring object)}
-}
-\value{
-
 }
 \description{
 Tidy transects

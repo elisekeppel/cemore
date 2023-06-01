@@ -31,7 +31,8 @@ library(rgdal)
 library(sf)
 library(magrittr)
 # Oct 2021
-x <- readOGR("data/hydrophone_deployment_wgs84.shp", verbose = F) %>% st_as_sf() %>% st_transform(crs = 4326)
+cemore <- "C:/Users/keppele/Documents/GitHub/cemore/cemore"
+x <- read_sf(paste0(cemore,"/data/hydrophone_deployment_wgs84.shp")) %>% st_as_sf() %>% st_transform(crs = 4326)
 y <- x %>% mutate(location = Deployed,
                   lat=POINT_Y,
                   lon=POINT_X,

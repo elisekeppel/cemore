@@ -5,13 +5,15 @@
 \title{plot_track
 Plot survey tracklines (from get_effort_lines(effort from processed survey data))}
 \usage{
-plot_track(transects, save = FALSE, coastline)
+plot_track(transects, save = FALSE, coord = NULL)
 }
 \arguments{
-\item{save}{}
-}
-\value{
+\item{transects}{LINESTRING object from get_effort_lines}
 
+\item{save}{Logical. Whether or not to save plot.}
+
+\item{coastline}{Coastline object (ie. bc_shp for high-resolution or
+coast for low-resolution)}
 }
 \description{
 plot_track

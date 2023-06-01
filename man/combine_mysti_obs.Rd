@@ -5,13 +5,10 @@
 \title{Combine Mysticetus observations
 Combine Mysticetus observations for multiple days over a survey}
 \usage{
-combine_mysti_obs(year, month, day)
+combine_mysti_obs(data.source = "cemore", year, month, day)
 }
 \arguments{
 \item{day}{}
-}
-\value{
-
 }
 \description{
 Combine Mysticetus observations

@@ -1,6 +1,7 @@
 # after Eva's code
 plot_survey <- function(data = ap_sf,
                         data.source="cemore",
+                        high_res = F,
                         Save = F,
                         file_name = NULL,
                         xmin=NULL,
@@ -14,6 +15,7 @@ plot_survey <- function(data = ap_sf,
                         effort_data = effort_data,
                         effort_by_day = F,
                         effort_by_vis = F,
+                        colour_month = F,
                         # show_transit = F,
                         N = F,
                         km = F,
@@ -26,23 +28,24 @@ plot_survey <- function(data = ap_sf,
                         hydrophone = F,
                         monthly = F,
                         season=  F,
-                        seasonYear=F,
+                        by_seasonYear=F,
                         leg.pos = "bottom",
                         coord = NULL
 ){
-
   # ---------------------------------------------------------------------
   # --------------------------- SET UP DATA -----------------------------
   # ---------------------------------------------------------------------
   # if(!exists(effort) & single_survey) effort <- T
   # if(!exists(effort) & !single_survey) effort <- F
 
-  if(!single_survey){
+  if(single_survey){
+    data <- ap_sf
+    effort_data <- effort_lines
+    years <- unique(effort_data$year)
+    months <- unique(effort_data$month)
+  }else{
     data <- all_ap_sf
     effort_data <- all_effort_lines
-    years <- unique(data$year)
-    months <- unique(data$month)
-  }else{
     years <- year
     months <- month
   }
@@ -53,14 +56,15 @@ plot_survey <- function(data = ap_sf,
   # ----------------- LOAD SPATIAL FILES --------------------------------
   # ----------------------------------------------------------------------
   # bc coast for plotting
-  if(!Save){
+  if(!high_res){
     if(!exists("coast")){
-      coast <- sf::st_read(dsn = "C:/Users/Keppele/Documents/GitHub/cemore/cemore/data", layer = "BC_coast_UTM9", quiet = T)
+      coast <- sf::st_read(dsn = "C:/Users/Keppele/Documents/GitHub/cemore/cemore/data", layer = "BC_coast_UTM9", quiet = T) %>%
+        sf::st_transform(crs = 4326)
     }
     coast_file <- coast
   }
   # higher resolution bc coast --- takes a long time to load
-  if(Save){
+  if(high_res){
     if(!exists("bc_shp")){
       bc_shp <- sf::st_read(dsn = "C:/Users/Keppele/Documents/GitHub/cemore/cemore/data", "BC_AK_WA_union_polygon", quiet = T) %>%
         sf::st_transform(crs = 4326)
@@ -74,7 +78,8 @@ plot_survey <- function(data = ap_sf,
       canada_shp <- st_read(dsn = "C:/Users/Keppele/Documents/GitHub/cemore/cemore/data", "CanadianEEZ", quiet = T) %>%
         st_transform(crs = 4326)
     }
-    border <- geom_sf(data = canada_shp, colour = "red", fill = NA, size = 0.1)
+    # border <- geom_sf(data = canada_shp, colour = "red", fill = NA, size = 0.1)
+    border <- geom_sf(data = canada_shp, colour = "black", fill = NA, linewidth = 0.05, lty = 1, alpha=0.1)
   }else{border <- NULL}
 
   if(is.null(coord)){
@@ -87,8 +92,8 @@ plot_survey <- function(data = ap_sf,
   if(data.source=="cemore"){
     bathy <- getNOAA.bathy(-125.7, -122.5,48, 49.5,res=1, keep=TRUE, path = "C:/Users/KeppelE/Documents/CeMoRe/Analysis/cemore_analysis/bath") %>% fortify(bathy)
   }else{
-      bathy <- getNOAA.bathy(xmin, xmax, ymin, ymax, res=1, keep=TRUE, path= "C:/Users/KeppelE/Documents/CeMoRe/Analysis/cemore_analysis/bath") %>% fortify(bathy)
-    }
+    bathy <- getNOAA.bathy(xmin, xmax, ymin, ymax, res=1, keep=TRUE, path= "C:/Users/KeppelE/Documents/CeMoRe/Analysis/cemore_analysis/bath") %>% fortify(bathy)
+  }
   bathy$z[which(bathy$z >= 0)] <- 0
   col <- rev(RColorBrewer::brewer.pal(9L, "Blues")[4:7])
   col_ramp <- colorRampPalette(col)
@@ -115,7 +120,8 @@ plot_survey <- function(data = ap_sf,
     geom_raster(aes(x=x,y=y,fill = z), data = bathy) +  #labs(fill = "Depth (m)") +
     scale_fill_gradientn(colours = col_ramp(20), guide = "none") +
     ggnewscale::new_scale("fill") +
-    geom_sf(data = coast_file, size = 0.1, fill = "light yellow", colour = "grey 60") +
+    # geom_sf(data = coast_file, size = 0.1, fill = "light yellow", colour = "grey 60") +
+    geom_sf(data = coast_file, linewidth = 0.01, fill = "light yellow", colour = "grey 60") +
     border
 
   # if require inset to magnify area of intense sightings
@@ -133,7 +139,8 @@ plot_survey <- function(data = ap_sf,
   # ---------------------------- RAW TRACKS -----------------------------
   # ---------------------------------------------------------------------
   if(!is.null(badelf)){
-    g <- g + geom_sf(data = badelf, size = 0.25, aes(colour = "Trackline"))
+    # g <- g + geom_sf(data = badelf, size = 0.25, aes(colour = "Trackline"))
+    g <- g + geom_sf(data = badelf, linewidth = 0.25, aes(colour = "Trackline"))
     # guides(colour = guide_legend(ncol=1, order = 3,override.aes = list(size=1),title.position=NULL))
 
 
@@ -147,10 +154,17 @@ plot_survey <- function(data = ap_sf,
     # effort_data <- effort_data %>%
     #   mutate(Effort = case_when(status == "On Effort" ~ "Survey effort",
     #                             status == "In Transit"~ "In transit"))
+    # if(plot_effort & plot_sgt){
+    #   effort_col <- "grey80"
+    # }else{
+    #     effort_col <- "black"
+    #   }
 
     if(effort_by_day){
       col <- c(paste0(c(RColorBrewer::brewer.pal(12, "Paired"))))
-      g <- g + geom_sf(data = effort_data, size = 0.25, aes(colour = as.factor(date))) +
+      g <- g +
+        # geom_sf(data = effort_data, size = 0.25, aes(colour = as.factor(date))) +
+        geom_sf(data = effort_data, linewidth = 0.25, aes(colour = as.factor(date))) +
         scale_colour_manual(name="Date",values=col)+
         guides(colour = guide_legend(ncol=1,order = 3,override.aes = list(size=1),title.position="top")) + #
         ggnewscale::new_scale("colour")
@@ -200,11 +214,45 @@ plot_survey <- function(data = ap_sf,
     }
 
     if(!effort_by_day & !effort_by_vis){ #  & !show_transit
-      g <- g + geom_sf(data = effort_data, size = 0.25, aes(colour = "Survey effort"))# +
-      # scale_colour_manual(values=c("Off effort" = "grey60", "On effort" = "black")) +
-      # guides(colour = guide_legend(ncol=1,order = 3,override.aes = list(size=1),title.position=NULL))  #    }
+
+      if(colour_month){
+
+        mpal <- c(brewer.pal(9, "Purples")[c(3,9)],  # light purple, dark purple
+                  brewer.pal(4, "Dark2")[4], # pink purple
+                  brewer.pal(9, "YlGn")[c(3,9)],  # light green, dark green
+                  brewer.pal(5, "Dark2")[5],  # bright green
+                  brewer.pal(9, "Reds")[c(3,6,9)],  # yellow, orange, red, pink
+                  brewer.pal(9, "Oranges")[c(3,6,9)])[c(1,3,2,4,6,5,7,8,9,10,11,12)] # light orange, brown
+
+        month_col <- c("Jan" = mpal[1],
+                       "Feb" = mpal[2],
+                       "Mar" = mpal[3],
+                       "Apr" = mpal[4],
+                       "May" = mpal[5],
+                       "Jun" = mpal[6],
+                       "Jul" = mpal[7],
+                       "Aug" = mpal[8],
+                       "Sep" = mpal[9],
+                       "Oct" = mpal[10],
+                       "Nov" = mpal[11],
+                       "Dec" = mpal[12])
+        g <- g +
+          geom_sf(data = effort_data, linewidth = 0.25, aes(colour = month_abb)) +
+          scale_colour_manual(values=month_col, name="Survey effort") +
+          guides(colour = guide_legend(ncol=1,order = 3,override.aes = list(linewidth=1),title.position=NULL)) + #coord
+        ggnewscale::new_scale("colour")
+
+      }else{
+        g <- g +
+          geom_sf(data = effort_data, linewidth = 0.5, colour = "black", aes(colour = "Survey effort"))# +
+        # geom_sf(data = effort_data, size = 0.25, aes(colour = "Survey effort"))# +
+        # scale_colour_manual(values=c("Off effort" = "grey60", "On effort" = "black")) +
+        # guides(colour = guide_legend(ncol=1,order = 3,override.aes = list(size=1),title.position=NULL))  #    }
+      }
     }
   }
+
+
   # ---------------------------------------------------------------------
   # ------------------------- TRACKS/EFFORT LEGEND ----------------------
   # ---------------------------------------------------------------------
@@ -226,33 +274,33 @@ plot_survey <- function(data = ap_sf,
   # ------------------------- TRACKS/EFFORT LABELS ----------------------
   # ---------------------------------------------------------------------
   if(N){
-    if(season & !seasonYear){
+    if(season & !by_seasonYear){
       tx <- effort_data %>% data.frame() %>%
         group_by(season)}
     if(monthly){
       tx <- effort_data %>% data.frame() %>%
         group_by(month_abb)}
-    if(seasonYear){
+    if(by_seasonYear){
       tx <- effort_data %>% data.frame() %>%
         group_by(season, year)}
 
     tx %<>% dplyr::summarise(N = n_distinct(SurveyID))
     g <- g+geom_text(data = tx, aes(x = -124.35, y = 48.9, label = paste0(N, " surveys")), size = 3)
-    }
+  }
 
   if(km){
-    if(season & !seasonYear){
+    if(season & !by_seasonYear){
       tx2 <- effort_data %>% data.frame() %>%
         dplyr::group_by(season)}
     if(monthly){
       tx2 <- effort_data %>% data.frame() %>%
         dplyr::group_by(month_abb)}
-    if(seasonYear){
+    if(by_seasonYear){
       tx2 <- effort_data %>% data.frame() %>%
         dplyr::group_by(season, year)}
 
     tx2 %<>% dplyr::summarise(dist = prettyNum(round(sum(length_km),0),
-                                        big.mark=","))
+                                               big.mark=","))
     g <- g+geom_text(data = tx2, aes(x = -124.35, y = 48.75, label = paste0(dist, " km")), size = 3)}
 
   # ----------------------------------------------------------------------
@@ -315,10 +363,16 @@ plot_survey <- function(data = ap_sf,
     #-----------------------------------------------------------
     # pal <- RColorBrewer::brewer.pal(12, "Paired")[c(2,4,3)]
     pal <- brewer.pal(9, "Set1")[c(1:9)] #red,blue,green,purple,orange,yellow,brown,pink,grey
+    hw <- brewer.pal(8, "Reds")[8]   # better sizing for publications (?)
+    hp <- brewer.pal(8, "Greens")[8] # better sizing for publications (?)
+    dp <- brewer.pal(8, "Purples")[8]# better sizing for publications (?)
 
     cols <-   c("Pacific white-sided dolphin" = pal[2], #blue
+                # "Humpback whale" = hw, #red
                 "Humpback whale" = pal[1], #red
+                # "Harbour porpoise" = hp, #green
                 "Harbour porpoise" = pal[3], #green
+                # "Dall\'s porpoise" = dp, #purple
                 "Dall\'s porpoise" = pal[4], #purple
                 "Unknown porpoise" = pal[6], #yellow
                 "Killer whale - northern resident" = "black",
@@ -344,16 +398,25 @@ plot_survey <- function(data = ap_sf,
 
 
     #-------------------------------------------------------------------
-    g <- g + geom_sf(data = ap_sf, alpha = 0.8, colour="black",stroke=0.2,
+
+    if(!is.null(species)){
+      shp= "none"
+      fl= "none"
+    }else{
+      shp = guide_legend(ncol=1,order = 1,override.aes = list(size=2),title.position = "top")
+      fl =  guide_legend(ncol=1,order = 1)
+    }
+    g <- g + geom_sf(data = ap_sf, alpha = 0.8, colour="black",stroke=0.1,
                      aes(fill = Species, shape = Species, size = Count)) +#
 
       scale_size_manual(values = c(1.25,1.75,2.5), name="Group Size") +
+      # scale_size_manual(values = c(0.7,1.1,1.6), name="Group Size") +  # better sizing for publications (?)
       scale_fill_manual(values = cols, breaks = sp, name = NULL)   +
       scale_shape_manual(values = shape, breaks = sp, name = NULL) +
 
       guides(alpha= "none",
-             shape = guide_legend(ncol=1,order = 1,override.aes = list(size=2),title.position = "top"),
-             fill =  guide_legend(ncol=1,order = 1),
+             shape=shp,
+             fill=fl,
              size =  guide_legend(ncol=1,order = 2,title.position = "top"))
     # annotation_custom(leg1, xmin=-119.1, xmax=-124.95, ymin=47.95, ymax=48.1) +
 
@@ -402,7 +465,7 @@ plot_survey <- function(data = ap_sf,
 
   if(!legend) g <- g + theme(legend.position = "none")
 
-    if(seasonYear) {
+  if(by_seasonYear) {
     g <- g +
       theme(axis.text.x = element_blank(),
             axis.text = element_blank(),
@@ -454,7 +517,7 @@ plot_survey <- function(data = ap_sf,
   if(depth){
     g <- cowplot::plot_grid(g, leg1, ncol = 1, rel_heights = c(1, .00001))}
 
-  if(Save & !seasonYear){
+  if(Save & !by_seasonYear){
     if(single_survey){
       if(is.null(file_name)) file_name <- paste0("C:/Users/keppele/Documents/CeMoRe/Analysis/cemore_analysis/output_maps/summary_map_",survey_title,".png")
     }else{
@@ -463,10 +526,10 @@ plot_survey <- function(data = ap_sf,
     ggsave(file_name, height = 15, width = 15, units = "cm")
   }
 
-  if(Save & seasonYear){
+  if(Save & by_seasonYear){
     png(file_name);grid.newpage; grid.draw(g1); dev.off()}
 
-  if(!seasonYear) g
+  if(!by_seasonYear) g
 
 }
 

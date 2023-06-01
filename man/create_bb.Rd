@@ -10,9 +10,6 @@ create_bb(xmin, xmax, ymin, ymax)
 \arguments{
 \item{ymax}{}
 }
-\value{
-
-}
 \description{
 create_bb
 Make a bounding box to clip plots by or create magnified inset

@@ -360,7 +360,7 @@ create_bb<- function(xmin, xmax, ymin, ymax){
 #' dir <- file.path("OUTPUT FILES","dataEffort table")
 #' effort <- read.delim(file.path(dir, paste0("dataEffortcemore_", year, "-",month, ".txt")))
 #' effort_lines <- get_effort_lines(effort)
-get_effort_lines <- function(effort){
+get_effort_lines <- function(effort, rare_obs=NULL, data.source="cemore"){
   effort %<>%
     dplyr::filter(Status == "ON") %>%
     dplyr::select(Vessel,date,year, month, month_abb, day, GpsT, transect_no, status, TransectID, Latitude, Longitude, ONSEQ_ID, SurveyID, season, CloudCover, Beaufort=Bf,Visibility=Port.Vis,
@@ -382,8 +382,22 @@ get_effort_lines <- function(effort){
     dplyr::summarize(do_union=FALSE) %>%
     sf::st_cast("LINESTRING")
 
-  effort %>% arrange(date) %>% mutate(length = st_length(geometry), length_km = as.numeric(units::drop_units(length))/1000) %>%
+  effort %<>% arrange(date) %>% mutate(length = st_length(geometry), length_km = as.numeric(units::drop_units(length))/1000) %>%
     filter(length_km >0)
+
+
+  if(data.source=="cemore"){
+    effort %<>% mutate(Visibility=ifelse(Visibility=="F","Moderate",Visibility))
+  }
+
+  if(!is.null(rare_obs)){
+    effort %<>% mutate( # halve the effort when SH was observing as we have too few observations by them and time with them on effort to include
+    length_km= case_when(
+      (Port.Obs %in% c(rare_obs) | Stbd.Obs %in% c(rare_obs)) ~ length_km/2,
+      !(Port.Obs %in% c(rare_obs) | Stbd.Obs %in% c(rare_obs)) ~ length_km
+    )
+  )}
+    return(effort)
 }
 
 load_effort <- function(year, month, single_survey = T, vessel=NULL,dir=NULL,data.source = "cemore"){
@@ -432,21 +446,21 @@ load_sightings <- function(year, month, single_survey = T, vessel=NULL,dir=NULL,
   month_abb <- month.abb[as.numeric(month)]
   if(single_survey){
     if(data.source=="cemore"){
-    AP <- rgdal::readOGR(file.path(dir, paste0(data.source,"_Sightings", "_truePositions_WGS84_UTM9N_",year,"_", month,".shp")), verbose = F)
-    }else{AP <- rgdal::readOGR(file.path(dir, paste0(data.source,"_Sightings", "_truePositions_WGS84_UTM9N_",year,"_", month,"_",vessel,".shp")), verbose = F)
+    AP <- sf::st_read(file.path(dir, paste0(data.source,"_WGS84_UTM9N_",year,"_", month,".shp")))
+    }else{AP <- sf::readOGR(file.path(dir, paste0(data.source,"_SWGS84_UTM9N_",year,"_", month,"_",vessel,".shp")))
   }
     }else{
       if(data.source=="cemore"){
         files <- list.files(path = dir, pattern = "\\.shp$")
     }else{files <- list.files(path = dir, pattern = "\\.shp$")
     }
-    AP <- purrr::map(file.path(dir,files), rgdal::readOGR, verbose = F)
+    AP <- purrr::map(file.path(dir,files), sf::st_read)
     AP <- do.call(rbind, AP)
     survey_title <- paste0("All CeMoRe surveys from Sep 2020 - ", survey_title)
     }
 
   AP %<>%     sf::st_as_sf() %>%
-    dplyr::mutate(date = lubridate::date(time_index))
+    dplyr::mutate(date = lubridate::date(tind_date))
   end_date <- lubridate::make_date(year=year, month=(as.numeric(month)+1))
   AP %<>% filter(date<end_date)
 
@@ -455,16 +469,16 @@ load_sightings <- function(year, month, single_survey = T, vessel=NULL,dir=NULL,
     dplyr::filter(!is.na(PSD_nm), !SightedBy=="SHrushowy") %>%
     dplyr::rename(Observer=SightedBy) %>%
     dplyr::mutate() %>%
-    dplyr::transmute(SurveyID,
+    dplyr::transmute(SurveyID=sid,
                      Vessel=vessel,
                      date,
-                     year = lubridate::year(time_index), month = lubridate::month(time_index),
+                     year = lubridate::year(tind_date), month = lubridate::month(tind_date),
                      month_abb = factor(month.abb[month], levels = month.abb[1:12]),
                      Sgt_ID=paste(year,month,Sgt_ID,sep="-"),
                      TransectID=Final_T_ID,#paste(year,month,Final_T_ID,sep="-"),
                      speed,
                      SD_nm,
-                     time_index,
+                     time=tind_time,
                      Species =  tolower(as.character(Species)),
                      Group_Size=BestNumber,
                      PSD_nm, distance = PSD_nm * 1.852,
@@ -506,6 +520,10 @@ load_sightings <- function(year, month, single_survey = T, vessel=NULL,dir=NULL,
 
     lev <- unique(ap_sf$SurveyID)
     ap_sf$SurveyID %<>% factor(levels = lev)
+
+    if(data.source=="cemore"){
+      ap_sf %<>% mutate(Visibility=ifelse(Visibility=="F","Moderate",Visibility))
+    }
   ap_sf
 
 }
@@ -630,21 +648,24 @@ survey_summary <- function(single=T,
   # s %>%  dplyr::group_by(month(time_index), day(time_index), Species) %>% dplyr::summarise(number_sightings = n(), number_indivduals = sum(Group_Size))
 
   # ------------- to summarise effort in field work -----------------------
-  x <- effort_lines %>%  mutate(length=st_length(geometry)) %>%
-    as.data.frame() %>% dplyr::select(-geometry) %>%
-    dplyr::group_by(SurveyID, date, TransectID) %>% #Year = year(GpsT), Month = month(GpsT)
-    dplyr::summarise(
-      distance_km=round(sum(as.numeric(length))/1000,0))
+  x <- as.data.frame(effort_lines)
+  if(nrow(x[which(x$year == 2020 & x$month == 8),])>0){
+    x[which(x$year == 2020 & x$month == 8),]$month <- 9}
+  if(nrow(x[which(x$year == 2022 & x$month == 5),])>0){
+    x[which(x$year == 2022 & x$month == 5),]$month <- 4}
 
-  y <- x %>% dplyr::group_by(SurveyID) %>% #Year = year(GpsT), Month = month(GpsT)
-    dplyr::summarise(TransectID = length(unique(x$TransectID)),
-                     date = length(unique(x$date)),
-                     distance_km=round(sum(distance_km)))
-  y$TransectID <- paste0("Number of transects = ", y$TransectID)
-  y$date <- paste0("Number of on-effort days = ", y$date)
-  y$distance_km <- paste0("Total km surveyed = ", y$distance_km)
-  x %<>% mutate(date=as.character(date), distance_km = as.character(distance_km))
-  summary[[3]] <- rbind(x,y)
+  y <- x %>%
+    dplyr::select(-geometry) %>%
+    dplyr::group_by(SurveyID, year, month) %>%
+    dplyr::summarise(transects = length(unique(TransectID)),
+                     days = length(unique(date)),
+                     distance_km=round(sum(length_km)))
+
+  # y$transects <- paste0("Number of transects = ", y$transects)
+  # y$days <- paste0("Number of on-effort days = ", y$days)
+  # y$distance_km <- paste0("Total km surveyed = ", y$distance_km)
+  # x %<>% mutate(date=as.character(date), distance_km = as.character(distance_km))
+  summary[[3]] <- y #rbind(x,y)
   # summary[[3]] <- effort_lines %>%  mutate(length=st_length(geometry)) %>%
   #  as.data.frame() %>% dplyr::select(-geometry) %>%
   #  dplyr::group_by(SurveyID) %>% #Year = year(GpsT), Month = month(GpsT)

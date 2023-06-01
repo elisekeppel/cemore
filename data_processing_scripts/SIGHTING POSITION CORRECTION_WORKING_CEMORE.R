@@ -310,7 +310,7 @@ spl <- spTransform(spl, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0
 
 #Clip BC polygon to spatial extent of sight lines
 # bc_clip <- gClip(bc_coast,spl) - not working EK
-b_poly <- as(extent(spl), "SpatialPolygons")
+b_poly <- as(raster::extent(spl), "SpatialPolygons")
 proj4string(b_poly) <- "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0"
 
 cat("\n - Coastline clipped by extent of sighting lines")
@@ -482,20 +482,21 @@ cat("\n\nChecking that corrected sightings don't fall on land...")
 data1 <- data[which(!is.na(data$final.lon)),] #Filter data to corrected positions only
 AP <- SpatialPointsDataFrame(cbind(data1$final.lon,data1$final.lat), data=data1, proj4string=CRS("+proj=longlat"))
 # AP <- spTransform(AP, CRSobj = proj4string(bc))
-AP <- spTransform(AP, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0") # EK edit
+# AP <- spTransform(AP, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0") # EK edit
+AP <- st_as_sf(AP) %>% st_transform(crs = st_crs(bc_coast)) # EK edit to use sf
 
 #Find any points that fall on land
 #plot(bc, axes=TRUE)
 #plot(AP, add=TRUE, col="red", cex=1.5, pch=16)
 LAND <- AP[bc_coast,]
-nrow(LAND@data) #number of points on land
+nrow(LAND) #number of points on land
 #Estimated distances that fall on land get data quality 'UED'
-if(length(which(data$ED==1 & is.na(data$IA) & data$key %in% LAND@data$key))!=0){
-  data[which(data$ED==1 & is.na(data$IA) & data$key %in% LAND@data$key),]$UED <- 1
+if(length(which(data$ED==1 & is.na(data$IA) & data$key %in% LAND$key))!=0){
+  data[which(data$ED==1 & is.na(data$IA) & data$key %in% LAND$key),]$UED <- 1
 }
 #Other sightings that fall on land get data quality 'IA'? This in theory would never happen - there are no other reasons I can think of that the corrected sighting would fall on land.
-if(length(which(is.na(data$IA) & is.na(data$ED) & data$key %in% LAND@data$key))!=0){
-  data[which(is.na(data$IA) & is.na(data$ED) & data$key %in% LAND@data$key),]$IA <- 1
+if(length(which(is.na(data$IA) & is.na(data$ED) & data$key %in% LAND$key))!=0){
+  data[which(is.na(data$IA) & is.na(data$ED) & data$key %in% LAND$key),]$IA <- 1
 }
 cat("DONE")
 
@@ -566,11 +567,14 @@ data$diff <- NULL
 #====================================
 #Check whether any final positions fall on land
 cat("\n\nChecking that final sightings positions don't fall on land...")
-AP <- SpatialPointsDataFrame(cbind(data$final.lon,data$final.lat), data=data, proj4string=CRS("+proj=longlat"))
-AP <- spTransform(AP, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0")
+AP <- SpatialPointsDataFrame(cbind(data$final.lon,data$final.lat), data=data, proj4string=CRS("+proj=longlat")) %>%
+  st_as_sf() # EK edit : change to sf
+# AP <- spTransform(AP, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0")
+AP <- st_transform(AP, crs = st_crs(bc_coast)) # EK edit : change to sf
+
 LAND <- AP[bc_coast,]
-nrow(LAND@data) #number of corrected positions on land. There should be nothing on land at this point
-if(nrow(LAND@data)!=0){
+nrow(LAND) #number of corrected positions on land. There should be nothing on land at this point
+if(nrow(LAND)!=0){
   stop("There are some final sightings positions that fall on land. This should be impossible at this point... See Eva.", call. = FALSE)
 }
 cat("DONE")
@@ -578,19 +582,19 @@ cat("DONE")
 #Check whether sightings were inside or outside of the EEZ to fill in Waters column
 cat("\n\nAssigning Waters to sightings (this may take a couple of minutes)...")
 # eez = readOGR(paste(getwd(),u,"Required shapefiles/EEZ/SDE_Boundaries_patched_WGS84_UTM9N.shp", sep = ""), verbose = FALSE) #Load in EEZ shapefile (in WGS84)
-eez = readOGR(paste(getwd(),u,"shapefiles/CanadianEEZ.shp", sep = ""), verbose = FALSE) #Load in EEZ shapefile (in WGS84)
-eez <- spTransform(eez, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0")
+eez = st_read(paste(getwd(),u,"shapefiles/CanadianEEZ.shp", sep = "")) #Load in EEZ shapefile (in WGS84)
+eez <- st_transform(eez, crs = st_crs(bc_coast))
 cat("\n - EEZ shapefile loaded")
 #plot(eez, axes=TRUE)
 CANADA <- AP[eez,]
-nrow(CANADA@data) #number of corrected positions in Canada
+nrow(CANADA) #number of corrected positions in Canada
 #plot(AP[which(AP@data$key %ni% CANADA@data$key),], add=TRUE, col="red", pch=16) #plot sightings outside of Canada
 data$Waters <- NA
-if(length(which(data$key %in% CANADA@data$key))!=0){
-  data[which(data$key %in% CANADA@data$key),]$Waters <- "CANADA"
+if(length(which(data$key %in% CANADA$key))!=0){
+  data[which(data$key %in% CANADA$key),]$Waters <- "CANADA"
 }
-if(length(which(data$key %ni% CANADA@data$key))!=0){
-  data[which(data$key %ni% CANADA@data$key),]$Waters <- "US"
+if(length(which(data$key %ni% CANADA$key))!=0){
+  data[which(data$key %ni% CANADA$key),]$Waters <- "US"
 }
 cat("\n - Sightings assigned to Waters")
 
