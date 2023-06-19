@@ -176,6 +176,7 @@ if(length(which(nn %ni% colnames(effort)))!=0){
   stop(paste("Column name(s) in EffortEnv.csv are missing or misspelled. We are looking for:", nn[which(nn %ni% colnames(effort))], sep = " "), call. = FALSE)
 }
 
+if(is.null(sightings$Porpoise.Behaviour)) sightings$Porpoise.Behaviour <- NA
 nn <- c("time_index", "time_local","GPS.Pos","Sgt.Id","Bearing","Reticles","Horizon_Certainty","Reticle.Instr","Distance..m.","Side","Obs","Species","Min.Cnt","Max.Cnt","Best.Cnt","Photos","Comments", "Incidental.Sighting","Bearing.Abs", "Sighting.Complete","Sgt.Dist..m.", "Sgt.Pos","Sgt.Lat","Sgt.Lon","Psd..m.", "QA.QC.Comments", "sighting_distance", "date", "Porpoise.Behaviour")
 if(length(which(nn %ni% colnames(sightings)))!=0){
   beep(10)
@@ -381,7 +382,7 @@ if(sum(is.na(survey$Date_Start_GMT))==nrow(survey) | sum(is.na(survey$Date_End_G
   #beep(10)
   stop("Oops! The Date and Time format in the dataSurveyID table is not correct. Make sure that the Regional settings on your computer have 'short date' format set to yyyy-MM-dd and 'long time' format set as HH:mm:ss, re-save the dataSurveyID table, and re-run this code.", call. = FALSE)
 }
-surveyid <- paste0(surveyid, "_", vessel)
+if(data.source == "mmcp") surveyid <- paste0(surveyid, "_", vessel)
 #Rename field names (to be consistent with previous survey data) # EK edit
 #----------------------------------------------------------------
 names(effort) <- c("time_index","time_local","Action","Status","Transect.ID","Platform","Franklin.Hut","Port.Observer","Starboard.Observer","Effort_Instrument","DataRecorder","PORT.Visibility","Beaufort","STBD.Visibility","Swell","Glare","Left.Glare.Limit","Right.Glare.Limit","Cloud.Cover","Precipitation","Comments","Locked.from.Editing","QAQC_Comments","GPSIndex")
@@ -645,7 +646,7 @@ summary(gps$Speed)
      (vessel == "TA" & max(gps$Speed) >20) |
      (vessel == "VE" & max(gps$Speed) >20) |
      (vessel == "FR" & max(gps$Speed) >25)){
-    x <- readline(prompt = cat(paste("\nThere are some suspiciously high speeds in the gps data. Do any of these need to be corrected?   [click here & type Yes or No & hit Enter]    \n\n", sep=" ")))
+    x <- readline(prompt = cat(paste("\nThere are some suspiciously high speeds (", max(gps$Speed), ") in the gps data. Do any of these need to be corrected?   [click here & type Yes or No & hit Enter]    \n\n", sep=" ")))
     if(x %ni% c("NO","no","No","N","n")){
       beep(10)
       stop("Please make your corrections in the gps table and re-run this code.", call. = FALSE)
@@ -1429,13 +1430,13 @@ cat("\n\n\n Sightings Corrected Position Shapefile...")
 #Export shapefile (true positions):
 # EK edit: writeOGR deprecated, switch to st_write which has more restrictions on field types and length of file/field names, etc.
 AP <- SpatialPointsDataFrame(cbind(positions$"final.lon",positions$final.lat), data=positions, proj4string=CRS("+proj=longlat")) %>%
-  st_as_sf() %>% st_transform(crs=4326)
+  st_as_sf() %>% st_transform(crs="+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0")
 AP <- AP %>% mutate(gpsdate=date(gpstimeutc),
                     gpstime=paste(hour(gpstimeutc),minute(gpstimeutc),second(gpstimeutc),sep="_"),
                     tind_date=date(time_index),
                     tind_time=paste(hour(time_index),minute(time_index),second(time_index),sep="_"),
                     sid=substr(SurveyID,8,17)) %>%
-  select(-c(SurveyID, gpstimeutc, time_index))
+  dplyr::select(-c(SurveyID, gpstimeutc, time_index))
 # AP <- spTransform(AP, CRSobj = proj4string(bc_coast))
 # AP <- spTransform(AP, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0")
 #Remove files already present in the export folder

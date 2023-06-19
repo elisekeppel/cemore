@@ -410,7 +410,9 @@ load_effort <- function(year, month, single_survey = T, vessel=NULL,dir=NULL,dat
     }
   }else{
     effort_files <- list.files(dir)
-    effort <- purrr::map_df(file.path(dir, effort_files), read.delim)
+    # effort <- purrr::map_df(file.path(dir, effort_files), read.delim)
+    effort <- purrr::map(file.path(dir, effort_files), read.delim)
+    effort <- purrr::map_df(effort, mutate, iteration=as.character(iteration))
   }
 
   effort %<>% dplyr::mutate(date = lubridate::date(GpsT))
