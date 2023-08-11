@@ -1,8 +1,8 @@
 # after Eva's code
-plot_survey <- function(data = ap_sf,
+plot_survey <- function(sgt_data = NULL,
                         data.source="cemore",
                         high_res = F,
-                        Save = F,
+                        save = F,
                         file_name = NULL,
                         xmin=NULL,
                         xmax=NULL,
@@ -12,10 +12,11 @@ plot_survey <- function(data = ap_sf,
                         single_survey=T,
                         badelf = NULL,
                         plot_effort = T, # T/F
-                        effort_data = effort_data,
+                        effort_data = NULL,
                         effort_by_day = F,
                         effort_by_vis = F,
                         colour_month = F,
+                        colour_year = F,
                         # show_transit = F,
                         N = F,
                         km = F,
@@ -26,7 +27,8 @@ plot_survey <- function(data = ap_sf,
                         incidentals = F,
                         incl_porps = F, # include hw and porps in incidentals
                         hydrophone = F,
-                        monthly = F,
+                        facet_month = F,
+                        facet_year = F,
                         season=  F,
                         by_seasonYear=F,
                         leg.pos = "bottom",
@@ -39,18 +41,18 @@ plot_survey <- function(data = ap_sf,
   # if(!exists(effort) & !single_survey) effort <- F
 
   if(single_survey){
-    data <- ap_sf
-    effort_data <- effort_lines
-    years <- unique(effort_data$year)
-    months <- unique(effort_data$month)
+    if(is.null(sgt_data)) {sgt_data <- ap_sf}
+    if(is.null(effort_data)) {effort_data <- effort_lines}
+    if(is.null(years)) {years <- unique(effort_data$year)}
+    if(is.null(months)) {months <- unique(effort_data$month)}
   }else{
-    data <- all_ap_sf
-    effort_data <- all_effort_lines
-    years <- year
-    months <- month
+     if(is.null(sgt_data)) {sgt_data <- all_ap_sf}
+     if(is.null(effort_data)) {effort_data <- all_effort_lines}
+     if(is.null(years)) {years <- year}
+     if(is.null(months)) {months <- month}
   }
 
-  ap_sf <- data %>% dplyr::select(year,month,Species,Group_Size,season,seasonYear)
+  ap_sf <- sgt_data %>% dplyr::select(year,month,Species,Group_Size,season,seasonYear)
 
   # ----------------------------------------------------------------------
   # ----------------- LOAD SPATIAL FILES --------------------------------
@@ -177,11 +179,11 @@ plot_survey <- function(data = ap_sf,
     # to size lines by vis
     if(effort_by_vis){
       effort_data <- effort_data %>%
-        mutate(vis_line = case_when(
-          Visibility == "R" ~ 0.25,
-          Visibility == "P" ~ 0.5,
-          Visibility == "F" ~ 1,
-          Visibility == "G&E" ~ 2),
+        mutate(
+          # vis_line = case_when(
+        #   Visibility == "P" ~ 0.5,
+        #   Visibility == "Moderate" ~ 1,
+        #   Visibility == "G&E" ~ 2),
           beauf_char = as.character(Beaufort))
 
       # effort_data$vis_line %<>% as.factor() %>% droplevels()
@@ -196,11 +198,11 @@ plot_survey <- function(data = ap_sf,
                 "5" = pal[4]) #purple
 
 
-      g <- g + geom_sf(data = effort_data, aes(linewidth =vis_line)) +
-        scale_linewidth(name="Visibility",range=c(0.25,1), labels = c("R","P","F","G&E"), guide = "legend") +
+      g <- g + geom_sf(data = effort_data, aes(linewidth =Visibility,colour=beauf_char)) +
+        scale_linewidth_manual(name="Visibility",values=c(1.75, 1.3, 0.5), labels = c("G&E","Moderate","P"), guide = "legend") +
         ggnewscale::new_scale("linewidth") +
-        geom_sf(data=effort_data, aes(colour=beauf_char)) +
         scale_colour_manual(name="Beaufort", values = bf) +
+        guides(colour = guide_legend(override.aes = list(linewidth=1),title.position=NULL)) +
         ggnewscale::new_scale("colour")
 
       # g + geom_sf(data = effort_data, aes(linewidth =Visibility)) +
@@ -240,7 +242,26 @@ plot_survey <- function(data = ap_sf,
           geom_sf(data = effort_data, linewidth = 0.25, aes(colour = month_abb)) +
           scale_colour_manual(values=month_col, name="Survey effort") +
           guides(colour = guide_legend(ncol=1,order = 3,override.aes = list(linewidth=1),title.position=NULL)) + #coord
-        ggnewscale::new_scale("colour")
+          ggnewscale::new_scale("colour")
+
+      }else{
+        if(colour_year){
+
+          ypal <- c(brewer.pal(8, "Dark2"))
+
+        year_col <-  c("2020" = ypal[1],
+                       "2021" = ypal[2],
+                       "2022" = ypal[3],
+                       "2023" = ypal[4],
+                       "2024" = ypal[5],
+                       "2025" = ypal[6],
+                       "2026" = ypal[7],
+                       "2027" = ypal[8])
+        g <- g +
+          geom_sf(data = effort_data, linewidth = 0.5, aes(colour = as.character(year))) +
+          scale_colour_manual(values=year_col, name="Survey effort") +
+          guides(colour = guide_legend(ncol=1,order = 3,override.aes = list(linewidth=1),title.position=NULL)) + #coord
+          ggnewscale::new_scale("colour")
 
       }else{
         g <- g +
@@ -251,7 +272,7 @@ plot_survey <- function(data = ap_sf,
       }
     }
   }
-
+}
 
   # ---------------------------------------------------------------------
   # ------------------------- TRACKS/EFFORT LEGEND ----------------------
@@ -461,7 +482,8 @@ plot_survey <- function(data = ap_sf,
   if(season) g <- g + facet_wrap(~ season) #+ # guides(shape="none",fill="none",size="none")
   # if(season & !is.null(species)) g <- g + #ggtitle(first_up(paste(species))) #
   # + guides(size="none")
-  if(monthly) g <- g + facet_wrap(~ month_abb) #+ # guides(shape="none",fill="none",size="none")
+  if(facet_month) g <- g + facet_wrap(~ month_abb) #+ # guides(shape="none",fill="none",size="none")
+  if(facet_year) g <- g + facet_wrap(~ year) #+ # guides(shape="none",fill="none",size="none")
 
   if(!legend) g <- g + theme(legend.position = "none")
 
@@ -517,7 +539,7 @@ plot_survey <- function(data = ap_sf,
   if(depth){
     g <- cowplot::plot_grid(g, leg1, ncol = 1, rel_heights = c(1, .00001))}
 
-  if(Save & !by_seasonYear){
+  if(save & !by_seasonYear){
     if(single_survey){
       if(is.null(file_name)) file_name <- paste0("C:/Users/keppele/Documents/CeMoRe/Analysis/cemore_analysis/output_maps/summary_map_",survey_title,".png")
     }else{
@@ -526,7 +548,7 @@ plot_survey <- function(data = ap_sf,
     ggsave(file_name, height = 15, width = 15, units = "cm")
   }
 
-  if(Save & by_seasonYear){
+  if(save & by_seasonYear){
     png(file_name);grid.newpage; grid.draw(g1); dev.off()}
 
   if(!by_seasonYear) g

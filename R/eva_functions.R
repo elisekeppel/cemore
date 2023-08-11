@@ -14,7 +14,7 @@ tru.bearing <- function(heading,bearing){
 #Calculate distance to object (in nmi) according to reticles from true horizon. Requires HOE (in m), binocular type ("Bi"=7x50 or "BE"), and # reticles from horizon.
 ret.dist <- function(height.of.eye,bino.type,reticles){
   if(bino.type!="BE"){
-    rpr <- 0.00497
+    rpr <- 0.00497 #(radians per reticle?)
   } else {
     rpr <- 0.00136
   }

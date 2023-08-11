@@ -416,7 +416,11 @@ load_effort <- function(year, month, single_survey = T, vessel=NULL,dir=NULL,dat
   }
 
   effort %<>% dplyr::mutate(date = lubridate::date(GpsT))
-  end_date <- lubridate::make_date(year=year, month=(as.numeric(month)+1))
+  if(month<12)
+  {end_date <- lubridate::make_date(year=year, month=(as.numeric(month)+1))
+  }else{
+    end_date <- lubridate::make_date(year=year+1, month=as.numeric(1))
+  }
   effort %<>% filter(date<end_date)
 
   effort %<>% dplyr::mutate(
@@ -463,7 +467,11 @@ load_sightings <- function(year, month, single_survey = T, vessel=NULL,dir=NULL,
 
   AP %<>%     sf::st_as_sf() %>%
     dplyr::mutate(date = lubridate::date(tind_date))
-  end_date <- lubridate::make_date(year=year, month=(as.numeric(month)+1))
+  if(month<12)
+  {end_date <- lubridate::make_date(year=year, month=(as.numeric(month)+1))
+  }else{
+    end_date <- lubridate::make_date(year=year+1, month=as.numeric(1))
+  }
   AP %<>% filter(date<end_date)
 
   ap_sf <- AP %>%
@@ -646,7 +654,7 @@ survey_summary <- function(single=T,
 
   # counts by month and species
   summary[[2]] <- s %>%
-    dplyr::group_by(SurveyID, Species) %>% #Year = year(GpsT), Month = month(GpsT)
+    dplyr::group_by(SurveyID, season, seasonYear, Species) %>% #Year = year(GpsT), Month = month(GpsT)
     dplyr::summarise(number_sightings = n(), number_individuals = sum(Group_Size))
   if(save) write.csv(summary[[2]], paste0("output_", data.source,"/sightings_summary/",data.source,"_species_summary_", year, tolower(month), ".csv"), row.names = FALSE)
   rm(s)
@@ -662,7 +670,7 @@ survey_summary <- function(single=T,
 
   y <- x %>%
     dplyr::select(-geometry) %>%
-    dplyr::group_by(SurveyID, year, month) %>%
+    dplyr::group_by(SurveyID, year, month, season, seasonYear) %>%
     dplyr::summarise(transects = length(unique(TransectID)),
                      days = length(unique(date)),
                      distance_km=round(sum(length_km)))
