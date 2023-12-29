@@ -107,11 +107,20 @@ for(i in 1:length(track.list)) { #upload all GPS tables
   } else {
     stop(paste0("TrackLine upload was unsuccessful: ", basename(track.files[i])))
   }
+  # EK edit - some mysti files come in with column Distance.From.Previous..km instead of ..m
+  if(!is.null(data$Distance.From.Previous..km.)) data$Distance.From.Previous..m. <- data$Distance.From.Previous..km.*1000
+  if(!is.null(data$Distance.From.Start..km.)) data$Distance.From.Start..m. <- data$Distance.From.Start..km.*1000
+  if(!is.null(data$Speed.Over.Ground..kph.)) data$Speed.Over.Ground..kts. <- data$Speed.Over.Ground..kph./1.852
+  data$Distance.From.Previous..km. <- NULL
+  data$Distance.From.Start..km. <- NULL
+  data$Speed.Over.Ground..kph. <- NULL
+
   # Get rid of rows where Distance.From.Previous..m. == 0
   data <- data[which(data$Distance.From.Previous..m.!=0 | is.na(data$Distance.From.Previous..m.)),] # why are all of our variables in "m" not "nm"?
 
   rownames(data)<-1:length(data$Distance.From.Previous..m.)
   data <- dplyr::rename(data, Time.Created = grep("Time.Created..P", names(data), value = T))
+  data <- dplyr::rename(data, Time.Created = grep("Time.Created..UTC..1", names(data), value = T))
   dates <- sort(unique(as.Date(str_extract(data$Time.Created, "^.{10}"), format="%Y-%m-%d"))) # EK edit changed to PST when required
   d <- as.numeric(diff(dates))
   #Check to ensure that file name dates match the date/time stamps within the file (i.e. look for non-consecutive dates):
@@ -382,7 +391,7 @@ if(sum(is.na(survey$Date_Start_GMT))==nrow(survey) | sum(is.na(survey$Date_End_G
   #beep(10)
   stop("Oops! The Date and Time format in the dataSurveyID table is not correct. Make sure that the Regional settings on your computer have 'short date' format set to yyyy-MM-dd and 'long time' format set as HH:mm:ss, re-save the dataSurveyID table, and re-run this code.", call. = FALSE)
 }
-if(data.source == "mmcp") surveyid <- paste0(surveyid, "_", vessel)
+# if(data.source == "mmcp") surveyid <- paste0(surveyid, "_", vessel)
 #Rename field names (to be consistent with previous survey data) # EK edit
 #----------------------------------------------------------------
 names(effort) <- c("time_index","time_local","Action","Status","Transect.ID","Platform","Franklin.Hut","Port.Observer","Starboard.Observer","Effort_Instrument","DataRecorder","PORT.Visibility","Beaufort","STBD.Visibility","Swell","Glare","Left.Glare.Limit","Right.Glare.Limit","Cloud.Cover","Precipitation","Comments","Locked.from.Editing","QAQC_Comments","GPSIndex")
@@ -515,8 +524,8 @@ if(sum(effort$Action %ni% c("Changing effort status","Observer rotation","Transe
 if(length(which(effort$Platform == "Bridge"))!=0){
   effort[which(effort$Platform=="Bridge"),]$Platform <- "Br"
 }
-if(length(which(effort$Platform %in% c("MBBow", "Fujinon_MBBow", "Fujinon_MBbow")))!=0){
-  effort[which(effort$Platform %in% c("MBBow", "Fujinon_MBBow", "Fujinon_MBbow")),]$Platform <- "Bo"
+if(length(which(effort$Platform %in% c("MBBow", "Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_ManyberriesBow (Manyberries)", "Fujinon_ManyberriesBow")))!=0){
+  effort[which(effort$Platform %in% c("MBBow", "Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_ManyberriesBow (Manyberries)", "Fujinon_ManyberriesBow")),]$Platform <- "Bo"
 }
 if(length(which(effort$Platform =="RBFly_sitting"))!=0){
   effort[which(effort$Platform =="RBFly_sitting"),]$Platform <- "RBFly_sit"
@@ -538,11 +547,11 @@ if(length(which(effort$Platform %in% c("Fujinon_TanuMonkey")))!=0){
 if(length(which(effort$Platform %in% c("Fujinon_FranklinMI")))!=0){
   effort[which(effort$Platform %in% c("Fujinon_FranklinMI")),]$Platform <- "FR"
 }
-if(length(which(effort$Platform %in% c("Fujinon_CharleyC")))!=0){
-  effort[which(effort$Platform %in% c("Fujinon_CharleyC")),]$Platform <- "CC"
+if(length(which(effort$Platform %in% c("Fujinon_CharleyCBow","Fujinon_CharleyC")))!=0){
+  effort[which(effort$Platform %in% c("Fujinon_CharleyCBow","Fujinon_CharleyC")),]$Platform <- "CC"
 }
-if(length(which(effort$Platform %in% c("Fujinon_GreatNorthern")))!=0){
-  effort[which(effort$Platform %in% c("Fujinon_GreatNorthern")),]$Platform <- "GN"
+if(length(which(effort$Platform %in% c("Fujinon_GreatNorthern","Fujinon_GreatNorthernBow")))!=0){
+  effort[which(effort$Platform %in% c("Fujinon_GreatNorthern","Fujinon_GreatNorthernBow")),]$Platform <- "GN"
 }
 if(length(which(effort$Platform %in% c("Fujinon_TitanJunior")))!=0){
   effort[which(effort$Platform %in% c("Fujinon_TitanJunior")),]$Platform <- "TJ"
@@ -641,17 +650,17 @@ if(sum(is.na(gps$Speed))!=0){
 summary(gps$Speed)
 
 #Find Distances that don't make sense - ALL DISTANCES SHOULD BE IN NAUTICAL MILES
-  if((vessel == "MB" & max(gps$Speed) >27) |
-     (vessel == "RB" & max(gps$Speed) >28) |
-     (vessel == "TA" & max(gps$Speed) >20) |
-     (vessel == "VE" & max(gps$Speed) >20) |
-     (vessel == "FR" & max(gps$Speed) >25)){
-    x <- readline(prompt = cat(paste("\nThere are some suspiciously high speeds (", max(gps$Speed), ") in the gps data. Do any of these need to be corrected?   [click here & type Yes or No & hit Enter]    \n\n", sep=" ")))
-    if(x %ni% c("NO","no","No","N","n")){
-      beep(10)
-      stop("Please make your corrections in the gps table and re-run this code.", call. = FALSE)
-    }
+if((vessel == "MB" & max(gps$Speed) >27) |
+   (vessel == "RB" & max(gps$Speed) >28) |
+   (vessel == "TA" & max(gps$Speed) >20) |
+   (vessel == "VE" & max(gps$Speed) >20) |
+   (vessel == "FR" & max(gps$Speed) >25)){
+  x <- readline(prompt = cat(paste("\nThere are some suspiciously high speeds (", max(gps$Speed), ") in the gps data. Do any of these need to be corrected?   [click here & type Yes or No & hit Enter]    \n\n", sep=" ")))
+  if(x %ni% c("NO","no","No","N","n")){
+    beep(10)
+    stop("Please make your corrections in the gps table and re-run this code.", call. = FALSE)
   }
+}
 ## if(sum(which(gps$Speed>25))!=0){
 #   index=which(gps$Speed>25)
 #   for(i in index){
@@ -819,8 +828,8 @@ sightings$Method <- sightings$Reticle.Instr
 #unique(sightings$Method)
 sightings$Platform <- NA
 
-if(nrow(sightings[which(sightings$Method %in% c("Fujinon_MBBow", "Fujinon_MBbow")),])!=0){
-  sightings[which(sightings$Method %in% c("Fujinon_MBBow", "Fujinon_MBbow")),]$Platform <- "Bo"
+if(nrow(sightings[which(sightings$Method %in% c("Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_ManyberriesBow(Manyberries)", "Fujinon_ManyberriesBow")),])!=0){
+  sightings[which(sightings$Method %in% c("Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_ManyberriesBow(Manyberries)", "Fujinon_ManyberriesBow")),]$Platform <- "Bo"
 }
 
 if(nrow(sightings[which(sightings$Method %in% c("Fujinon_bridge", "Fujinon_MBBridge")),])!=0){
@@ -840,11 +849,11 @@ if(nrow(sightings[which(sightings$Method %in% c("Fujinon_FranklinMI")),])!=0){
   sightings[which(sightings$Method%in% c("Fujinon_FranklinMI")),]$Platform <- "Fujinon_FranklinMI"
 }
 # for CharleyC
-if(nrow(sightings[which(sightings$Method %in% c("Fujinon_CharleyC")),])!=0){
-  sightings[which(sightings$Method%in% c("Fujinon_CharleyC")),]$Platform <- "Fujinon_CC"
+if(nrow(sightings[which(sightings$Method %in% c("Fujinon_CharleyC","Fujinon_CharleyCBow(CharleyC)")),])!=0){
+  sightings[which(sightings$Method%in% c("Fujinon_CharleyC","Fujinon_CharleyCBow(CharleyC)")),]$Platform <- "Fujinon_CC"
 }# for GreatNorthern
-if(nrow(sightings[which(sightings$Method %in% c("Fujinon_GreatNorthern")),])!=0){
-  sightings[which(sightings$Method%in% c("Fujinon_GreatNorthern")),]$Platform <- "Fujinon_GN"
+if(nrow(sightings[which(sightings$Method %in% c("Fujinon_GreatNorthern","Fujinon_GreatNorthernBow")),])!=0){
+  sightings[which(sightings$Method%in% c("Fujinon_GreatNorthern","Fujinon_GreatNorthernBow")),]$Platform <- "Fujinon_GN"
 }# for Franklin
 if(nrow(sightings[which(sightings$Method %in% c("Fujinon_TitanJunior")),])!=0){
   sightings[which(sightings$Method%in% c("Fujinon_TitanJunior")),]$Platform <- "Fujinon_TJ"
@@ -858,8 +867,8 @@ if(sum(!is.na(sightings$Distance))!=0){
 # unique(sightings$Platform)
 
 #Adjust Method entries so they will work with our pre-written functions ('Bi', 'BE', 'NE'):
-if(sum(sightings$Method %in% c("Fujinon_bridge", "Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_MBBridge", "Fujinon_RBbridge", "Fujinon_RBFly","Fujinon_VecBridge","Fujinon_TanuMonkey","Fujinon_TanuBridge", "Fujinon_FranklinMI","Fujinon_CharleyC","Fujinon_GreatNorthern", "Fujinon_TitanJunior"))!=0){
-  sightings[which(sightings$Method %in% c("Fujinon_bridge","Fujinon_MBbow", "Fujinon_MBBow", "Fujinon_MBBridge", "Fujinon_RBbridge", "Fujinon_RBFly", "Fujinon_VecBridge","Fujinon_TanuMonkey","Fujinon_TanuBridge", "Fujinon_FranklinMI","Fujinon_CharleyC", "Fujinon_GreatNorthern", "Fujinon_TitanJunior")),]$Method <- "Bi"
+if(sum(sightings$Method %in% c("Fujinon_bridge", "Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_ManyberriesBow(Manyberries)", "Fujinon_ManyberriesBow", "Fujinon_MBBridge", "Fujinon_RBbridge", "Fujinon_RBFly","Fujinon_VecBridge","Fujinon_TanuMonkey","Fujinon_TanuBridge", "Fujinon_FranklinMI","Fujinon_CharleyC","Fujinon_CharleyCBow(CharleyC)","Fujinon_GreatNorthern","Fujinon_GreatNorthernBow", "Fujinon_TitanJunior"))!=0){
+  sightings[which(sightings$Method %in% c("Fujinon_bridge","Fujinon_MBbow", "Fujinon_ManyberriesBow(Manyberries)", "Fujinon_ManyberriesBow", "Fujinon_MBBow", "Fujinon_MBBridge", "Fujinon_RBbridge", "Fujinon_RBFly", "Fujinon_VecBridge","Fujinon_TanuMonkey","Fujinon_TanuBridge", "Fujinon_FranklinMI","Fujinon_CharleyC","Fujinon_CharleyCBow(CharleyC)", "Fujinon_GreatNorthern","Fujinon_GreatNorthernBow", "Fujinon_TitanJunior")),]$Method <- "Bi"
 }
 
 
@@ -1228,7 +1237,7 @@ if(!exists("bc_coast")){
   #   st_transform(crs = 4326) #Load in CHS coastline shapefile (in WGS84)
   # bc_coast <- st_transform(bc_coast, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0")
   # EK edit: change to using sf package
-  bc_coast <- sf::st_read(dsn="C:\\Users\\keppele\\Documents\\ArcGIS\\basemaps\\CoastLand.shp") %>%
+  bc_coast <- sf::st_read(dsn="C:\\Users\\keppele\\Documents\\ArcGIS\\basemaps\\Coastland") %>%
     st_transform(crs = 3005) %>% dplyr::select(geometry)
 }
 cat("\n - Land shapefile loaded")
@@ -1347,11 +1356,11 @@ cat("\n\n\n Effort Table...")
 #Final Effort Table
 # write.table(Effort.Final,paste(getwd(),u,"OUTPUT FILES",u,"dataEffort table",u,"PRISMM_dataEffort",surveyID.abbrev, ".txt", sep = ""), sep="\t",row.names=F)
 if(data.source=="cemore"){
-write.table(Effort.Final,paste(getwd(),u,paste0("OUTPUT FILES ",data.source),u,"dataEffort table",u,data.source,"_Effort_",year,"_",month,".txt", sep = ""), sep="\t",row.names=F)
+  write.table(Effort.Final,paste(getwd(),u,paste0("OUTPUT FILES ",data.source),u,"dataEffort table",u,data.source,"_Effort_",year,"_",month,".txt", sep = ""), sep="\t",row.names=F)
   cat(paste("\n Saved as: '",data.source,"_dataEffort",year,"_",month, ".txt'", sep = ""))
 }
 if(data.source=="mmcp"){
-write.table(Effort.Final,paste(getwd(),u,paste0("OUTPUT FILES ",data.source),u,"dataEffort table",u,data.source,"_Effort_",year,"_",month,"_",vessel,".txt", sep = ""), sep="\t",row.names=F)
+  write.table(Effort.Final,paste(getwd(),u,paste0("OUTPUT FILES ",data.source),u,"dataEffort table",u,data.source,"_Effort_",year,"_",month,"_",vessel,".txt", sep = ""), sep="\t",row.names=F)
   cat(paste("\n Saved as: '",data.source,"_dataEffort",year,"_",month,"_",vessel, ".txt'", sep = ""))
 }
 
@@ -1420,8 +1429,8 @@ if(data.source=="cemore"){
   cat(paste("\n Saved as: '",data.source,"_dataSightings",year,"_",month,".txt'", sep = ""))
 }
 if(data.source=="mmcp"){
-    write.table(positions,paste(getwd(),u,paste0("OUTPUT FILES ",data.source),u,"dataSightings table",u,data.source,"_Sightings_",year,"_",month, "_", vessel,".txt", sep = ""), sep="\t",row.names=F)
-    cat(paste("\n Saved as: '",data.source,"_dataSightings",year,"_",month, "_",vessel,".txt'", sep = ""))
+  write.table(positions,paste(getwd(),u,paste0("OUTPUT FILES ",data.source),u,"dataSightings table",u,data.source,"_Sightings_",year,"_",month, "_", vessel,".txt", sep = ""), sep="\t",row.names=F)
+  cat(paste("\n Saved as: '",data.source,"_dataSightings",year,"_",month, "_",vessel,".txt'", sep = ""))
 }
 
 #Export Sightings shapefile

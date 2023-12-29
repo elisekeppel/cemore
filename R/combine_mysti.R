@@ -61,8 +61,7 @@ combine_mysti_tracks <- function(year, month, day){
   x <- purrr::map_df(files, ~ read.csv(file.path(dir, .x))) %>%
    dplyr::arrange(lubridate::date(Time.Created..UTC.))
 
-  unlink(file.path(dir, files[1]), recursive = T, force = T)
-  unlink(file.path(dir, files[2]), recursive = T, force = T)
+  map(file.path(dir, files), unlink, recursive=T, force=T)
 
   write.csv(x, file.path(dir, files[1]),row.names = F)
 }

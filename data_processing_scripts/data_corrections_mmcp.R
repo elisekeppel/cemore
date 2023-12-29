@@ -7,7 +7,7 @@
 # ----------------------------------------------------------------------
 
 if(year == 2022 & tolower(month_abb) == "jul" & vessel=="GN"){
-  data$effort[which(data$effort$Action ==""),]$Action <- "Weather update" # cannot have empty Action field - there was a comment aded after effort ended for day
+  data$effort[which(data$effort$Action ==""),]$Action <- "Weather update" # cannot have empty Action field - there was a comment added after effort ended for day
   data$sightings[which(data$sightings$Bearing %like% "N/A"),]$Bearing <- "" # cannot have NA in bearing field
 }
 
@@ -43,6 +43,48 @@ if(year == 2022 & tolower(month_abb) == "sep" & vessel=="TJ"){
   data$sightings[which(is.na(data$sightings$Reticle.Instr)),]$Reticle.Instr <-  "Fujinon_TitanJunior" # incidental sgt's with no ret instr
 }
 
+# Trackline mysti csv files field name changed
+if(data.source == "cemore") track.path <- file.path(getwd(),main.dir, "tracklines", "transects", "csv", paste0(year, "-", month))
+if(data.source == "mmcp") track.path <- file.path(getwd(), main.dir, "tracklines", "transects", "csv", paste0(year, "-", month),vessel)
+track.files <- list.files(track.path,include.dirs = FALSE,full.names = TRUE)
+track.list <- as.list(track.files)
+for(i in 1:length(track.list)) { #upload all GPS tables
+  x <- read.csv(track.files[i], header=TRUE, stringsAsFactors = FALSE, strip.white = TRUE, na.strings = c("NA","na","n/a","N/A",""))
+
+  if(!is.null(x$Distance.From.Previous..km.)) {
+    x %<>% rename(Distance.From.Previous..m.=Distance.From.Previous..km.) %>%
+      mutate(Distance.From.Previous..m.*1000)
+    # x$Distance.From.Previous..m. <- x$Distance.From.Previous..km.*1000
+    # x$Distance.From.Previous..km. <- NULL
+  }
+  if(!is.null(x$Speed.Over.Ground..kph.)) {
+    x %<>% rename(Speed.Over.Ground..kts.=Speed.Over.Ground..kph.) %>%
+      mutate(Speed.Over.Ground..kts./1.852)
+    # x$Speed.Over.Ground..kts. <- x$Speed.Over.Ground..kph./1.852
+    # x$Speed.Over.Ground..kph. <- NULL
+  }
+  if(!is.null(x$Distance.From.Start..km.)) {
+    x %<>% rename(Distance.From.Start..m.=Distance.From.Start..km.) %>%
+      mutate(Distance.From.Start..m.*1000)
+    # x$Distance.From.Start..m. <- x$Distance.From.Start..km.*1000
+    # x$Distance.From.Start..km. <- NULL
+  }
+  write.csv(x, track.files[i], row.names=F)
+}
+
+if(vessel=="CC" & nrow(data$sightings[which(data$sightings$Reticle.Instr==""),])>0){
+  data$sightings[which(data$sightings$Reticle.Instr==""),]$Reticle.Instr <- "Fujinon_CharleyCBow (CharleyC)"
+}
+
+if(year == 2023 & tolower(month_abb) == "aug" & vessel=="CC"){
+  data$effort[which(data$effort$time_index =="2023-08-21T10:28:53.1"),]$time_local <- "2023-08-21T10:29:28" # effort start entry before up to speed
+  data$effort[which(data$effort$time_index =="2023-08-21T10:28:53.1"),]$time_index <- "2023-08-21T10:29:28" # effort start entry before up to speed
+  data$effort[which(data$effort$time_index =="2023-08-21T16:34:27.8"),]$time_local <- "2023-08-21T16:34:08" # effort end entry after slowed down speed
+  data$effort[which(data$effort$time_index =="2023-08-21T16:34:27.8"),]$time_index <- "2023-08-21T16:34:08" # effort end entry after slowed down speed
+}
+if(year == 2023 & tolower(month_abb) == "aug" & vessel=="GN"){
+  data$effort[which(data$effort$time_index =="2023-08-21T17:16:27.4"),]$Action <- "Weather update" # effort entry at end of day with blank 'action' field - must be populated
+}
 cat("Applying data corrections")
 
 # ----------------------------------------------------------------------

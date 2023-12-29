@@ -19,6 +19,44 @@ data$effort %<>% mutate(iteration = iteration)
 if(!survey$Vessel_code == "FR") data$effort$Franklin.Hut <- NA
 #data$effort[which(!is.na(data$effort$Transect.ID)),] %<>% mutate(Transect.ID = paste(iteration, Transect.ID, sep = "-"))
 
+# Trackline mysti csv files field name changed
+if(data.source == "cemore") track.path <- file.path(getwd(),main.dir, "tracklines", "transects", "csv", paste0(year, "-", month))
+if(data.source == "mmcp") track.path <- file.path(getwd(), main.dir, "tracklines", "transects", "csv", paste0(year, "-", month),vessel)
+track.files <- list.files(track.path,include.dirs = FALSE,full.names = TRUE)
+track.list <- as.list(track.files)
+for(i in 1:length(track.list)) { #upload all GPS tables
+  x <- read.csv(track.files[i], header=TRUE, stringsAsFactors = FALSE, strip.white = TRUE, na.strings = c("NA","na","n/a","N/A",""))
+
+  if(!is.null(x$Distance.From.Previous..km.)) {
+    x$Distance.From.Previous..m. <- x$Distance.From.Previous..km.*1000
+    x$Distance.From.Previous..km. <- NULL
+  }
+  if(!is.null(x$Speed.Over.Ground..kph.)) {
+    x$Speed.Over.Ground..kts. <- x$Speed.Over.Ground..kph./1.852
+    x$Speed.Over.Ground..kph. <- NULL
+  }
+  if(!is.null(x$Distance.From.Start..km.)) {
+    x$Distance.From.Start..m. <- x$Distance.From.Start..km.*1000
+    x$Distance.From.Start..km. <- NULL
+  }
+  write.csv(x, track.files[i], row.names=F)
+  # if(!is.null(data$Sightings$Distance..km.)) {
+  #   data$Sightings %<>% rename(Distance..m. = Distance..km.) %>% mutate(Distance..m.=Distance..m.*1000)
+  # }
+  # if(!is.null(data$Sightings$Sgt.Dist..km.)) {
+  #   data$Sightings %<>% rename(Sgt.Dist..m. = Sgt.Dist..km.) %>% mutate(Sgt.Dist..m.=Sgt.Dist..m.*1000)
+  # }
+  #
+  # if(!is.null(data$Sightings$Psd..km.)) {
+  #   data$Sightings %<>% rename(Psd..m. = Psd..km.) %>% mutate(Psd..m.=Psd..m.*1000)
+  # }
+  # if(is.null(data$Time.Created)){
+  #   data$Time.Created <- data$Time.Created..UTC..1
+  #   data$Time.Created..UTC..1 <- NULL
+  #   write.csv(data, track.files[i], row.names=F)
+  # }
+}
+
 # ----------------------------------------------------------------------
 # -------------------- DATA CORRECTIONS - BY MONTH ---------------------
 # ----------------------------------------------------------------------
@@ -280,6 +318,31 @@ if(year == 2023 & tolower(month_abb) == "jan"){
 if(year == 2023 & tolower(month_abb) == "feb"){
   data$effort[which(data$effort$PORT.Visibility == "Fair (CCG)"),]$PORT.Visibility <- "Moderate"
   data$effort[which(data$effort$STBD.Visibility == "Fair (CCG)"),]$STBD.Visibility <- "Moderate"
+}
+
+if(year == 2023 & tolower(month_abb) == "jul"){
+  data$effort[which(data$effort$time_index == "2023-07-20T14:26:30.4"),]$time_local <- "2023-07-20T14:26:30.4"
+  data$sightings[which(is.na(data$sightings$time_local)),]$time_local <- data$sightings[which(is.na(data$sightings$time_local)),]$time_index
+  data$sightings[which(data$sightings$time_index=="2023-07-16 20:19:12"),]$Distance..m. <- data$sightings[which(data$sightings$time_index=="2023-07-16 20:19:12"),]$Distance..m./1000
+  data$effort[which(data$effort$time_index == "2023-07-19T15:41:18.6"),]$Status <- "OFF EFFORT"
+  data$effort[which(data$effort$time_index == "2023-07-19T15:42:54.8"),]$Status <- "ON EFFORT"
+}
+
+if(year == 2023 & tolower(month_abb) == "sep"){
+  data$sightings[which(is.na(data$sightings$time_local)),]$time_local <- data$sightings[which(is.na(data$sightings$time_local)),]$time_index
+  data$effort[nrow(data$effort) +1,] <- c("2023-09-12T10:43:53.0",
+                                          "2023-09-12T10:43:53.0",
+                                          "Changing effort status",
+                                          "OFF EFFORT", rep(NA, 21))
+  data$effort %<>% arrange(time_index)
+  }
+
+if(year == 2023 & tolower(month_abb) == "nov"){
+  data$effort[which(data$effort$time_index == "2023-11-21T11:40:15.9"),]$time_local <- "2023-11-21T11:40:15.9"
+  data$effort[which(data$effort$time_index == "2023-11-28T09:43:09.5"),]$time_local <- "2023-11-28T09:43:09.5"
+  data$effort[which(data$effort$time_index == "2023-11-28T10:43:42.8"),]$time_local <- "2023-11-28T10:43:42.8"
+  data$effort <- data$effort[which(!data$effort$time_local == "2023-11-20T14:18:06.7"),]
+  data$effort %<>% arrange(time_index)
 }
 
 
