@@ -221,10 +221,10 @@ if(length(which(is.na(data$Platform)))!=0){
   data[which(is.na(data$Platform)),]$Platform <- data[which(is.na(data$Platform)),]$platform
 }
 #Make sure that method and platform from sightings table and effort table match
-sum(data$Method != data$instrument,na.rm=TRUE)  #it's likely that Method and Instrument will not match up totally -- that's OK.
-nrow(data[which(data$Method!="NE" & (data$Method != data$instrument)),])  #it's likely that Method and Instrument will not match up totally -- that's OK. Method will be what is used for the position correction
+sum(data$Method != data$effort_instrument,na.rm=TRUE)  #it's likely that Method and Instrument will not match up totally -- that's OK.
+nrow(data[which(data$Method!="NE" & (data$Method != data$effort_instrument)),])  #it's likely that Method and Instrument will not match up totally -- that's OK. Method will be what is used for the position correction
 sum(data$Platform != data$platform,na.rm=TRUE) #all platform data matches
-data$instrument <- NULL
+data$effort_instrument <- NULL
 data$platform <- NULL
 cat("DONE")
 
@@ -624,8 +624,8 @@ cat("\n\nFormatting sightings shapefile attribute table...")
 # positions <- data[,c("SurveyID","GPSIndex","Sgt.ID","key","gpstime.utc","time_index.x","M.int","Event","SHIPLAT","SHIPLON","speed","port.visibility","beaufort","stbd.visibility","precipitation","status","final.transect.id","onseq_id","vessel","Platform","Side","Method","SightedBy","Horizon_Certainty","Bearing","BEARING","Reticle","Distance","Ret_line","SD_nm","PSD_nm","final.lat","final.lon","Position.type","Waters","Data.Quality","Species","BestNumber","MinNumber","MaxNumber","Multispecies","Detect.Min","Detect.Max","Detect.Best")]
 # names(positions) <- c("SurveyID","GPSIndex","Sgt.ID","key","gpstimeutc","time_index","M.int","Event","SHIPLAT","SHIPLON","speed","port.visib","beauf","stbd.visib","precip","status","Final.T.ID","onseq_id","vessel","Platform","Side","Method","SightedBy","Horizon_C","Bearing.R","Bearing.T","Reticle","Distance","Ret_line","SD_nm","PSD_nm","final.lat","final.lon","Pos.type","Waters","Data.Qual","Species","BestNumber","MinNumber","MaxNumber","M.species","Det.Min","Det.Max","Det.Best")
 # EK edit - remove fields associated with multispecies sightings
-positions <- data[,c("SurveyID","GPSIndex","Sgt.ID","key","gpstime.utc","time_index.x","M.int","Event","SHIPLAT","SHIPLON","speed","port.visibility","beaufort","stbd.visibility","swell","glare", "left.glare.limit", "right.glare.limit","precipitation","status","final.transect.id","onseq_id","vessel","Platform","Side","Method","SightedBy","Horizon_Certainty","Bearing","BEARING","Reticle","Distance","Ret_line","SD_nm","PSD_nm","final.lat","final.lon","Position.type","Waters","Data.Quality","Species","BestNumber","MinNumber","MaxNumber")]
-names(positions) <- c("SurveyID","GPSIndex","Sgt.ID","key","gpstimeutc","time_index","M.int","Event","SHIPLAT","SHIPLON","speed","port.visib","beauf","stbd.visib","swell","glare", "l.glare", "r.glare","precip","status","Final.T.ID","onseq_id","vessel","Platform","Side","Method","SightedBy","Horizon_C","Bearing.R","Bearing.T","Reticle","Distance","Ret_line","SD_nm","PSD_nm","final.lat","final.lon","Pos.type","Waters","Data.Qual","Species","BestNumber","MinNumber","MaxNumber")
+positions <- data[,c("SurveyID","GPSIndex","Sgt.ID","key","gpstime.utc","time_index.x","M.int","Event","SHIPLAT","SHIPLON","speed","port.visibility","beaufort","stbd.visibility","swell","glare", "left.glare.limit", "right.glare.limit","precipitation","cloud.cover", "status","final.transect.id","onseq_id","vessel","Platform","Side","Method","SightedBy","Horizon_Certainty","Bearing","BEARING","Reticle","Distance","Ret_line","SD_nm","PSD_nm","final.lat","final.lon","Position.type","Waters","Data.Quality","Species","BestNumber","MinNumber","MaxNumber")]
+names(positions) <- c("SurveyID","GPSIndex","Sgt.ID","key","gpstimeutc","time_index","M.int","Event","SHIPLAT","SHIPLON","speed","port.visib","beauf","stbd.visib","swell","glare", "l.glare", "r.glare","precip","cloudcover","status","Final.T.ID","onseq_id","vessel","Platform","Side","Method","SightedBy","Horizon_C","Bearing.R","Bearing.T","Reticle","Distance","Ret_line","SD_nm","PSD_nm","final.lat","final.lon","Pos.type","Waters","Data.Qual","Species","BestNumber","MinNumber","MaxNumber")
 
 positions <- positions[order(positions$GPSIndex),]
 rownames(positions) <- c(1:nrow(positions))

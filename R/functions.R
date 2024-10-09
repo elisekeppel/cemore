@@ -163,7 +163,7 @@ plot_track <- function(transects, save = FALSE, coord = NULL){
   # cols <- paste0(c(RColorBrewer::brewer.pal(9, "Set3")))[c(1,3:5,7,8,9)][1:n]
   cols <- c(paste0(c(RColorBrewer::brewer.pal(12, "Paired"))),"black")
   if(is.null(coord)){
-  coord <- coord_sf(xlim = c(-125.5, -123), ylim = c(48.1, 49.5), crs = sf::st_crs(4326))
+  coord <- coord_sf(xlim = c(-125.3, -123), ylim = c(48.1, 49.5), crs = sf::st_crs(4326))
   }
 
   if(!exists("coast")){
@@ -185,7 +185,7 @@ plot_track <- function(transects, save = FALSE, coord = NULL){
   }
 
   if(length(unique(month(transects$date)))==1){
-    colour_by <- transects$file
+    colour_by <- transects$date
     png_name <- paste0(month.abb[unique(month(transects$date))], unique(year(transects$date)), ".png")
   }else{
     colour_by <- paste0(transects$month,"_",transects$year)
@@ -200,7 +200,7 @@ plot_track <- function(transects, save = FALSE, coord = NULL){
     guides(color = guide_legend(override.aes = list(size = 1.5))) +
     legend
   if(save) ggsave(paste0("output_maps/survey_track_", png_name))
-  plot
+  # plot
 }
 
 
@@ -286,14 +286,14 @@ get_obs_data <- function(year, month, data.source = "cemore", vessel = "MB"){
                                                            "Minke Whale",
                                                            "Pacific White-sided Dolphin"))
 
-  multispecies <- list()
-  for(i in seq_along(files)){
-    multispecies[[i]] <- read.csv(file.path(dir, files[[i]], "xMultiSpecies.csv"), header=TRUE, stringsAsFactors = FALSE)
-    multispecies[[i]] %<>%
-      dplyr::rename(time_index = names(multispecies[[i]][grep("Index", names(multispecies[[i]]))]),
-                    time_local = names(multispecies[[i]][grep("local", names(multispecies[[i]]))]))
-  }
-  multispecies <- dplyr::bind_rows(multispecies)
+  # multispecies <- list()
+  # for(i in seq_along(files)){
+  #   multispecies[[i]] <- read.csv(file.path(dir, files[[i]], "xMultiSpecies.csv"), header=TRUE, stringsAsFactors = FALSE)
+  #   multispecies[[i]] %<>%
+  #     dplyr::rename(time_index = names(multispecies[[i]][grep("Index", names(multispecies[[i]]))]),
+  #                   time_local = names(multispecies[[i]][grep("local", names(multispecies[[i]]))]))
+  # }
+  # multispecies <- dplyr::bind_rows(multispecies)
 
 
   effort <- list()
@@ -309,19 +309,19 @@ get_obs_data <- function(year, month, data.source = "cemore", vessel = "MB"){
   }
   effort <- dplyr::bind_rows(effort)
 
-  c <- list()
-  for(i in seq_along(files)){
-    c[[i]] <- read.csv(file.path(dir, files[[i]], "zComments.csv"), header=TRUE, stringsAsFactors = FALSE)
-    c[[i]] %<>%
-      dplyr::rename(time_index = names(c[[i]][grep("Index", names(c[[i]]))]),
-                    time_local = names(c[[i]][grep("local", names(c[[i]]))])) %>%
-      dplyr::mutate_at(c("time_index", "time_local", "Position", "Notes", "Lock.from.Editing"), as.character)
+  # c <- list()
+  # for(i in seq_along(files)){
+  #   c[[i]] <- read.csv(file.path(dir, files[[i]], "zComments.csv"), header=TRUE, stringsAsFactors = FALSE)
+  #   c[[i]] %<>%
+  #     dplyr::rename(time_index = names(c[[i]][grep("Index", names(c[[i]]))]),
+  #                   time_local = names(c[[i]][grep("local", names(c[[i]]))])) %>%
+  #     dplyr::mutate_at(c("time_index", "time_local", "Position", "Notes", "Lock.from.Editing"), as.character)
+  #
+  # }
+  # comments <- dplyr::bind_rows(c)
 
-  }
-  comments <- dplyr::bind_rows(c)
-
-  df <- list(effort, sightings, multispecies, comments)
-  names(df) <- c("effort", "sightings", "multispecies", "comments")
+  df <- list(effort, sightings)#, multispecies, comments)
+  names(df) <- c("effort", "sightings")#, "multispecies", "comments")
 
   folder <- file.path(main.dir,"raw_data", "collated_rds")
   if(!file.exists(folder)) dir.create(folder)
@@ -365,43 +365,59 @@ create_bb<- function(xmin, xmax, ymin, ymax){
 #' effort <- read.delim(file.path(dir, paste0("dataEffortcemore_", year, "-",month, ".txt")))
 #' effort_lines <- get_effort_lines(effort)
 get_effort_lines <- function(effort, rare_obs=NULL, data.source="cemore"){
+  if(is.null(effort$line.code)){
+    effort$line.code <- "NA"
+  }
   effort %<>%
     dplyr::filter(Status == "ON") %>%
-    dplyr::select(Vessel,date,year, month, month_abb, day, GpsT, transect_no, status, TransectID, Latitude, Longitude, ONSEQ_ID, SurveyID, season, CloudCover, Beaufort=Bf,Visibility=Port.Vis,
-                  Swell, Glare, Precip, Port.Obs, Stbd.Obs) %>%
-    dplyr::mutate(date=lubridate::date(GpsT),
-                  seasonYear = paste0(tolower(season), year),
-                  seasonYear = factor(seasonYear, levels = unique(seasonYear))) %>%
+    dplyr::select(Vessel, SurveyID, GPSIndex, GpsT, # ONSEQ_ID,
+                                 date,year, month, month_abb, day, GpsT,
+                                 # transect_no,
+                  Status, TransectID,
+                                 season,
+                                 Beaufort=Bf,
+                  Port.Vis, Stbd.Vis, Visib,
+                  Port.Obs, Stbd.Obs,
+                                 Swell, Glare, L.G.Limit, R.G.Limit, Precip, CloudCover,
+                                 line.code,
+                                 Latitude, Longitude) %>%
+    arrange(GpsT) %>%
+
     sf::st_as_sf(coords = c("Longitude", "Latitude"), crs = 4326) %>%
-    dplyr::group_by(
-      Vessel,
-      ONSEQ_ID,
-      SurveyID,
-      date,
-      year, month, month_abb, day, transect_no,
-                    TransectID
-                    , CloudCover, season, seasonYear, Beaufort, Visibility,
-                    Swell, Glare, Precip, Port.Obs, Stbd.Obs,status
+    dplyr::group_by(Vessel, SurveyID, # ONSEQ_ID,
+                                   date, year, month, month_abb, #day, #GpsT,
+                                   # transect_no,
+                    Status, TransectID,
+                                   season,
+                                   Beaufort,
+                    Port.Vis, Stbd.Vis, Visib,
+                    # Port.Obs, Stbd.Obs,
+                                   Swell, Glare,
+                    # L.G.Limit, R.G.Limit,
+                    Precip,
+                    CloudCover,
+                                   line.code
                     ) %>%
-    dplyr::summarize(do_union=FALSE) %>%
+    dplyr::summarize(min.GPSInd=min(GPSIndex),max.GPSInd=max(GPSIndex), do_union=FALSE) %>%
     sf::st_cast("LINESTRING") %>% ungroup() %>% as.data.frame() %>%
     sf::st_as_sf()
 
-  effort %<>% arrange(date) %>% mutate(length = st_length(geometry), length_km = as.numeric(units::drop_units(length))/1000) %>%
+  effort %<>% arrange(date, TransectID) %>% mutate(length = st_length(geometry), length_km = as.numeric(units::drop_units(length))/1000) %>%
     filter(length_km >0)
 
+  effort$line.code <- 1:nrow(effort)
 
-  if(data.source=="cemore"){
-    effort %<>% mutate(Visibility=ifelse(Visibility=="F","Moderate",Visibility))
-  }
+  # if(data.source=="cemore"){
+  #   effort %<>% mutate(Visibility=ifelse(Visibility=="F","Moderate",Visibility))
+  # }
 
-  if(!is.null(rare_obs)){
-    effort %<>% mutate( # halve the effort when SH was observing as we have too few observations by them and time with them on effort to include
-    length_km= case_when(
-      (Port.Obs %in% c(rare_obs) | Stbd.Obs %in% c(rare_obs)) ~ length_km/2,
-      !(Port.Obs %in% c(rare_obs) | Stbd.Obs %in% c(rare_obs)) ~ length_km
-    )
-  )}
+  # if(!is.null(rare_obs)){
+  #   effort %<>% mutate( # halve the effort when SH was observing as we have too few observations by them and time with them on effort to include
+  #   length_km= case_when(
+  #     (Port.Obs %in% c(rare_obs) | Stbd.Obs %in% c(rare_obs)) ~ length_km/2,
+  #     !(Port.Obs %in% c(rare_obs) | Stbd.Obs %in% c(rare_obs)) ~ length_km
+  #   )
+  # )}
     return(effort)
 }
 
@@ -441,10 +457,36 @@ load_effort <- function(year, month, single_survey = T, vessel=NULL,dir=NULL,dat
       month %in% c(7:9) ~ "Summer",
       month %in% c(10:12)  ~ "Fall"
     ), levels = c("Winter", "Spring", "Summer", "Fall")),
-    transect_no = as.numeric(str_remove_all(Final.T.ID,SurveyID)), #, #Raw.T.ID
+    transect_no = as.numeric(stringr::str_remove_all(Final.T.ID,SurveyID)), #, #Raw.T.ID
     status = ifelse(transect_no <100,"On Effort","In Transit")) %>%
     dplyr::mutate(TransectID=Final.T.ID) #paste(SurveyID,transect_no, sep="_"))
   if(!is.null(vessel)) effort %<>% filter(Vessel == vessel)
+
+  # ##### EK edit ###########
+  #Create final Visibility field that combines the STBD and PORT Visibility fields (using the worse one) # EK edit
+  if(data.source=="cemore"){
+    effort %<>% mutate(Port.Vis = case_when(
+      Port.Vis == "F" ~ "Moderate",
+      !Port.Vis == "F" ~ Port.Vis),
+      Stbd.Vis = case_when(
+        Stbd.Vis == "F" ~ "Moderate",
+        !Stbd.Vis == "F" ~ Stbd.Vis
+      ))
+  }
+  effort$Port.Vis <- factor(effort$Port.Vis , levels=c("R","P","Moderate","F", "G&E"))
+  effort$Stbd.Vis <- factor(effort$Stbd.Vis , levels=c("R","P","Moderate","F", "G&E"))
+  col <- c("Port.Vis","Stbd.Vis")
+
+  v <- which(!effort$Port.Vis==effort$Stbd.Vis)
+
+  effort$Visib <- effort$Port.Vis
+  for(i in v){
+    # if(sum(is.na(effort[i,col]))!=2){
+    x <- which.min(as.numeric(c(effort[i,]$Port.Vis,effort[i,]$Stbd.Vis)))
+    effort[i,]$Visib <- effort[i,col[x]] %>% as.character()
+  }
+  # View(effort[v,c("Port.Vis","Stbd.Vis","Visib")])
+  # #################################
 
   if(length(effort$month_abb[which(effort$month_abb == "Aug" & effort$year == 2020)])>0){
     effort$month_abb[which(effort$month_abb == "Aug" & effort$year == 2020)] <- "Sep"}
@@ -509,8 +551,13 @@ load_sightings <- function(year, month, single_survey = T, vessel=NULL,dir=NULL,
                      glare,
                      l_glare,
                      r_glare,
-                     Visibility = port_visib,
+                     port_visib,
+                     stbd_visib,
+                     Visibility = case_when(
+                       Side=="Port" ~  port_visib,
+                       Side=="Starboard" ~ stbd_visib),
                      swell, precip, Observer, Reticle, Bearing_R,
+                     cloudcover,
                      season = factor(dplyr::case_when(
                        month %in% c(7:9) ~ "Summer",
                        month %in% c(10:12)  ~ "Fall",
@@ -537,13 +584,38 @@ load_sightings <- function(year, month, single_survey = T, vessel=NULL,dir=NULL,
                                      ))) %>%
     sf::st_transform(crs = sf::st_crs(4326)) %>%
     dplyr::arrange(year, month)
-  # if(!is.null(vessel)) ap_sf %<>% filter(Vessel == vessel)
+  if(!is.null(vessel)) ap_sf %<>% filter(Vessel == vessel)
+
+  if(data.source=="cemore"){
+    ap_sf %<>% mutate(Visibility=ifelse(Visibility=="F","Moderate",Visibility))
+    ap_sf %<>% mutate(port_visib=ifelse(port_visib=="F","Moderate",port_visib))
+    ap_sf %<>% mutate(stbd_visib=ifelse(stbd_visib=="F","Moderate",stbd_visib))
+  }
+  ap_sf$port_visib <- factor(ap_sf$port_visib , levels=c("P","Moderate", "G&E"))
+  ap_sf$stbd_visib <- factor(ap_sf$stbd_visib , levels=c("P","Moderate", "G&E"))
+  col <- c("port_visib","stbd_visib")
+
+  v <- which(!ap_sf$port_visib==ap_sf$stbd_visib)
+
+  ap_sf$Visib <- ap_sf$Visibility
+  for(i in v){
+    # if(sum(is.na(effort[i,col]))!=2){
+    x <- which.min(as.numeric(c(ap_sf[i,]$port_visib,ap_sf[i,]$stbd_visib)))
+    ap_sf[i,]$Visib <- st_drop_geometry(ap_sf)[i,col[x]] %>% as.character()
+  }
 
   lev <- unique(ap_sf$SurveyID)
   ap_sf$SurveyID %<>% factor(levels = lev)
 
-  if(data.source=="cemore"){
-    ap_sf %<>% mutate(Visibility=ifelse(Visibility=="F","Moderate",Visibility))
+
+  #########################################################
+  # KW ecotype updates as determined by Lisa Spaven after looking at mysti comments and BCCSN records
+  # updated May 21, 2024
+  #########################################################
+  if(!single_survey){
+    ap_sf[which(ap_sf$time_index=="2021-03-02 15:38:02"),]$Species <- "killer whale - Bigg's"
+    ap_sf[which(ap_sf$time_index=="2021-10-13 13:25:26"),]$Species <- "killer whale - southern resident"
+    # ap_sf[which(ap_sf$time_index=="2022-04-27 09:53"),]$Species <- "killer whale - Bigg's" ### NOT YET ON EFFORT FOR THE DAY
   }
   ap_sf
 
@@ -568,9 +640,8 @@ get_incid <- function(single_survey=T,
                       Year=NULL,
                       Month=NULL,
                       include_hw_porps=F){
-  if(single_survey){
     if(is.null(Year)) Year=year
-    if(is.null(Month)) Month=month}
+    if(is.null(Month)) Month=month
   x <- get_all_raw_sgt(single=single_survey, Year,Month)
   x %<>%
     filter(Incidental.Sighting == T)
@@ -628,7 +699,7 @@ survey_summary <- function(single=T,
                            Month = month,
                            save=F,
                            data.source="cemore",
-                           vessel=NULL
+                           Vessel=NULL
 ){
   if(data.source == "cemore") main.dir <- "survey_data"
   if(data.source == "mmcp") main.dir <- "mmcp_data"
@@ -664,7 +735,7 @@ survey_summary <- function(single=T,
     dplyr::group_by(year, season, SurveyID, Species) %>% #Year = year(GpsT), Month = month(GpsT)
     dplyr::summarise(number_sightings = n(), number_individuals = sum(Group_Size))
   if(save) write.csv(summary[[2]], paste0("output_", data.source,"/sightings_summary/",data.source,"_species_summary_", year, tolower(month), ".csv"), row.names = FALSE)
-  rm(s)
+  # rm(s)
   # count cetacean sightings by species by day
   # s %>%  dplyr::group_by(month(time_index), day(time_index), Species) %>% dplyr::summarise(number_sightings = n(), number_indivduals = sum(Group_Size))
 
@@ -677,7 +748,7 @@ survey_summary <- function(single=T,
 
   y <- x %>%
     dplyr::select(-geometry) %>%
-    dplyr::group_by(SurveyID, year, month, season, seasonYear) %>%
+    dplyr::group_by(SurveyID, year, month, season) %>%
     dplyr::summarise(transects = length(unique(TransectID)),
                      days = length(unique(date)),
                      distance_km=round(sum(length_km)))
@@ -698,29 +769,29 @@ survey_summary <- function(single=T,
     if(data.source=="cemore"){
       survey_data <- read.table(file.path("C:\\Users\\KeppelE\\Documents\\CeMoRe\\Analysis\\cemore_analysis",main.dir,"tidy_data",year,tolower(month_abb),paste0(data.source,"_",year,tolower(month_abb),"_dataSurveyID.txt")))
     }else{
-      survey_data <- read.table(file.path("C:\\Users\\KeppelE\\Documents\\CeMoRe\\Analysis\\cemore_analysis",main.dir,"tidy_data",year,tolower(month_abb),vessel,paste0(data.source,"_",year,tolower(month_abb),"_",vessel,"_dataSurveyID.txt")))
+      survey_data <- read.table(file.path("C:\\Users\\KeppelE\\Documents\\CeMoRe\\Analysis\\cemore_analysis",main.dir,"tidy_data",year,tolower(month_abb),Vessel,paste0(data.source,"_",year,tolower(month_abb),"_",Vessel,"_dataSurveyID.txt")))
     }
   }else{
     k <- 0
     survey_data <- list()
-    if(!is.null(vessel)) surveys %<>% filter(vessel %in% vessel)
-    surveys %<>% filter(!iteration==99) #, vessel == "MB")
+    # if(!is.null(Vessel)) surveys %<>% filter(vessel %in% Vessel)
+    surveys %<>% filter(!iteration==99, vessel == "MB")
     for(i in unique(surveys$year)){
       # year <- surveys[[i]]$year
       for(j in unique((surveys %>% filter(year==i))$month)){
         # month_abb <- j
-        if(data.source=="cemore"){
+        # if(data.source=="cemore"){
           k <- k+1
           survey_data[[k]] <- read.table(file.path("C:\\Users\\KeppelE\\Documents\\CeMoRe\\Analysis\\cemore_analysis",main.dir,"tidy_data",i,tolower(j),paste0(data.source,"_",i,tolower(j),"_dataSurveyID.txt")))
-        }else{
-          vessels <- list.dirs(file.path(main.dir,"tidy_data",i,tolower(j)),full.names=F)
-          vessels <- vessels[!vessels %in% c("")]
-          for(v in vessels){
-            k <- k+1
-            survey_data[[k]] <- read.table(file.path("C:\\Users\\KeppelE\\Documents\\CeMoRe\\Analysis\\cemore_analysis",main.dir,"tidy_data",i,tolower(j),v,paste0(data.source,"_",i,tolower(j),"_", v,"_dataSurveyID.txt")))
-
-          }
-        }
+        # }else{
+        #   vessels <- list.dirs(file.path(main.dir,"tidy_data",i,tolower(j)),full.names=F)
+        #   vessels <- vessels[!vessels %in% c("")]
+        #   for(v in vessels){
+        #     k <- k+1
+        #     survey_data[[k]] <- read.table(file.path("C:\\Users\\KeppelE\\Documents\\CeMoRe\\Analysis\\cemore_analysis",main.dir,"tidy_data",i,tolower(j),v,paste0(data.source,"_",i,tolower(j),"_", v,"_dataSurveyID.txt")))
+        #
+        #   }
+        # }
       }
     }
     survey_data <- map_df(survey_data, rbind)
@@ -738,7 +809,9 @@ survey_summary <- function(single=T,
                   field_days = (Date_End_GMT - Date_Start_GMT + 1) %>% as.numeric(),
                   firstday = paste(month.name[start_month], start_day, sep=" "),
                   lastday = paste(month.name[end_month], end_day, sep=" "))
-  names(summary) <- c("sightings","species","effort","survey")
+  summary[[5]] <- s %>% group_by(Species) %>% summarise("# Sightings" = length(Group_Size), "# Individuals" = sum(Group_Size))
+
+  names(summary) <- c("tot_sgt_by_survey","tot_sgt_by_sp&survey","effort","survey", "tot_sgt_by_sp")
   if(data.source == "cemore"){
     saveRDS(summary, paste0("C:/users/keppele/documents/cemore/analysis/cemore_analysis/summary_",data.source,"/",data.source,year,"_",month,".rds"))
   }else{

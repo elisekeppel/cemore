@@ -135,9 +135,13 @@ for(i in 1:length(track.list)) { #upload all GPS tables
 }
 
 gps <- do.call("rbind",track.list) #append all GPS data together
-gps$Time.Created..UTC. <- as.POSIXct(strptime(gps$Time.Created..UTC., format = "%Y-%m-%d %H:%M:%S"),tz="GMT") # Make sure GPS data is in GMT!
 gps$Time.Created <- as.POSIXct(strptime(gps$Time.Created,format = "%Y-%m-%dT%H:%M:%S"),tz="America/Vancouver") #EK edit
-# gps$Time.Created..PST. <- as.POSIXct(strptime(gps$Time.Created..PST.,format = "%Y-%m-%dT%H:%M:%S"),tz="America/Vancouver")
+if(!is.null(gps$Time.Created..UTC.)){
+  gps$Time.Created..UTC. <- as.POSIXct(strptime(gps$Time.Created..UTC., format = "%Y-%m-%d %H:%M:%S"),tz="GMT") # Make sure GPS data is in GMT!
+}else{
+  gps$Time.Created..UTC. <- gps$Time.Created %>% with_tz("UTC")
+}
+  # gps$Time.Created..PST. <- as.POSIXct(strptime(gps$Time.Created..PST.,format = "%Y-%m-%dT%H:%M:%S"),tz="America/Vancouver")
 
 #Remove redundant records
 gps <- gps[order(gps$Time.Created),]
@@ -199,6 +203,7 @@ if(length(which(nn %ni% colnames(survey)))!=0){
 }
 
 nn <- c("Time.Created..UTC.","Time.Created","Latitude","Longitude","Altitude..m.","Speed.Over.Ground..kts.","Course.Over.Ground..T.","Distance.From.Previous..m.","Course.Over.Ground.from.Start..T.","Distance.From.Start..m.","Water.Temperature..C.","Water.Depth..m.")
+nn <- c("Time.Created..UTC.","Time.Created","Latitude","Longitude","Speed.Over.Ground..kts.","Course.Over.Ground..T.","Distance.From.Previous..m.")
 if(length(which(nn %ni% colnames(gps)))!=0){
   beep(10)
   stop(paste("Column name(s) in Gps Data are missing or misspelled. We are looking for:", toString(nn[which(nn %ni% colnames(gps))], sep = " ")), call. = FALSE)
@@ -261,6 +266,12 @@ if(sum(is.na(gps$Time.Created))!=0){
 
 #Create GPS index
 #this will be the unique key for the GPS and Effort dataframes. The unique key for the Sighting table will be GPSIndex-SightingNo
+# fix any gaps from Mysti using data from badelf
+if(badelf) {be <- read.csv(file.path("survey_data/tracklines/transects/badelf", badelf_filename))
+# be %<>% transmute(Time.Created..UTC.=GpsTime.UTC, Time.Created=GpsTime,  Latitude, Longitude, Speed.Over.Ground..kts.=NA,Course.Over.Ground..T.=NA)
+gps <- rbind(gps,be)
+}
+
 gps <- gps[order(gps$Time.Created),]
 rownames(gps) <- c(1:nrow(gps))
 gps$GPSIndex <- c(1:nrow(gps))
@@ -273,7 +284,7 @@ if(sum(effort$time_index==effort$time_local)!=nrow(effort)){
 
 effort <- effort[,c("time_index","time_local","Action","Status","Transect.ID","Platform","Franklin.Hut","PORT.Observer","STBD.Observer","Effort_Instrument","Data.Recorder", "PORT.Visibility","Beaufort","STBD.Visibility","Swell","Glare","Left.Glare.Limit","Right.Glare.Limit","Cloud.Cover","Precipitation", "Comments","Locked.from.Editing","QA.QC_Comments")]
 
-
+######### EK edit ###############
 #Numeric variables
 nv <- c("Beaufort","Left.Glare.Limit","Right.Glare.Limit")
 index <- which(names(effort) %in% nv)
@@ -298,6 +309,34 @@ effort$time_index <- gsub("T"," ", effort$time_index)
 effort$time_index <- as.POSIXct(strptime(effort$time_index,format = "%Y-%m-%d %H:%M:%S"),tz="America/Vancouver")
 effort <- effort[order(effort$time_index),]
 rownames(effort) <- c(1:nrow(effort))
+
+# ##########################################
+# # ##### adding this here instead of load data for new vis comes in earlier = quicker processing ###########
+# #Create final Visibility field that combines the STBD and PORT Visibility fields (using the worse one) # EK edit
+# if(data.source %in% c("cemore", "mmcp")){
+#   effort %<>% mutate(PORT.Visibility = case_when(
+#     PORT.Visibility == "Fair" ~ "Moderate",
+#     !PORT.Visibility == "Fair" ~ PORT.Visibility),
+#     STBD.Visibility = case_when(
+#       STBD.Visibility == "Fair" ~ "Moderate",
+#       !STBD.Visibility == "Fair" ~ STBD.Visibility
+#     ))
+#
+# effort$PORT.Visibility <- factor(effort$PORT.Visibility , levels=c("Poor","Moderate", "Excellent/Good"))
+# effort$STBD.Visibility <- factor(effort$STBD.Visibility , levels=c("Poor","Moderate", "Excellent/Good"))
+# col <- c("PORT.Visibility","STBD.Visibility")
+#
+# v <- which(!effort$PORT.Visibility==effort$STBD.Visibility)
+#
+# effort$Visib <- NA
+# for(i in v){
+#   # if(sum(is.na(effort[i,col]))!=2){
+#   x <- which.min(as.numeric(c(effort[i,]$PORT.Visibility,effort[i,]$STBD.Visibility)))
+#   effort[i,]$Visib <- effort[i,col[x]] %>% as.character()
+# }
+# # View(effort[v,c("Port.Vis","Stbd.Vis","Visib")])
+# }
+# #################################
 
 #Match effort dataframe records to nearest GPS record
 effort$GPSIndex <- NA
@@ -624,7 +663,7 @@ if(sum(effort$STBD.Visibility %ni% c(NA,"R","G&E","F","P", "Moderate"))!=0){
 }
 
 #Create final Visibility field that combines the STBD and PORT Visibility fields (using the worse one) # EK edit
-vis <- c("R","P","F","G&E", "Moderate")
+vis <- c("R","P","F", "Moderate","G&E")
 col <- c("PORT.Visibility","STBD.Visibility")
 effort$Visib <- NA
 for(i in 1:nrow(effort)){
@@ -1098,7 +1137,15 @@ ON.start <- on[which(on %in% ind)] #each time ON effort segment begins
 #Required conditions:
 #Conditions required for analysis -- these MUST be filled out for all ON-effort records
 #Speed is a required condition but has already been checked for completion
-req.conditions <- c("Platform","Transect.ID","Effort_Instrument","PORT.Visibility","Beaufort","STBD.Visibility","Swell","Glare","Left.Glare.Limit","Right.Glare.Limit","Cloud.Cover","Precipitation")
+req.conditions <- c("Platform","Transect.ID","Effort_Instrument","PORT.Visibility","Beaufort","STBD.Visibility","Swell","Glare","Left.Glare.Limit","Right.Glare.Limit","Cloud.Cover","Precipitation","Port.Observer","Starboard.Observer") # EK edit: moved observers here from other conditions code below
+
+# beepr::beep(10)
+# x <- readline(prompt = cat(paste("\nAdded Data recorder to required conditions to fill down due to eror at fillNAgaps to re-process sep 2023 survey in July 2024 for segmenting. [click here & type OK to continue]    \n\n", sep=" ")))
+# if(x %ni% c("OK", "ok", "Ok")){
+#   #beep(10)
+#   stop("Fix fillNAgaps and continue", call. = FALSE)
+# }
+
 # ADD IN ???
 #Find any ON-effort start records with at least one empty condition required for analysis
 #Fix missing effort data
@@ -1124,14 +1171,16 @@ if(length(rec.bl) != 0){
 effort[which(effort$Status=="ON"),paste(req.conditions)] <- lapply(effort[which(effort$Status=="ON"),paste(req.conditions)], fill)
 #Other conditions:
 #Pull down conditions within ON-effort segments
-conditions <- c("Port.Observer","Starboard.Observer","DataRecorder")
 
-#As not all initial values are necessarily filled in, we will use the fillNAgaps function and go segment by segment
-for(i in seq_along(ON.start)){ #loop through each segment
-  ON.end <- min(ind[which(ind > ON.start[i])])-1 #get the last row of the segment
-  effort[ON.start[i]:ON.end, paste(conditions)] <- lapply(effort[ON.start[i]:ON.end, paste(conditions)], fillNAgaps)
-}
-cat("DONE")
+### EK edit temp see note above re DataRecorder
+# conditions <- c("DataRecorder")
+#
+# #As not all initial values are necessarily filled in, we will use the fillNAgaps function and go segment by segment
+# for(i in seq_along(ON.start)){ #loop through each segment
+#   ON.end <- min(ind[which(ind > ON.start[i])])-1 #get the last row of the segment
+#   effort[ON.start[i]:ON.end, paste(conditions)] <- lapply(effort[ON.start[i]:ON.end, paste(conditions)], fillNAgaps)
+# }
+# cat("DONE")
 
 #Examine Speed
 #--------------------------------

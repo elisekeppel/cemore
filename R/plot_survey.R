@@ -2,6 +2,8 @@
 plot_survey <- function(sgt_data = NULL,
                         data.source="cemore",
                         bath = T,
+                        survey_area=F,
+                        background="white",
                         high_res = F,
                         save = F,
                         file_name = NULL,
@@ -25,16 +27,27 @@ plot_survey <- function(sgt_data = NULL,
                         km = F,
                         depth = F,
                         legend = T,
+                        # leg_inside=F,
                         plot_sgt = T,
                         species = NULL,
+                        spec_order=F,
                         incidentals = F,
                         incl_porps = F, # include hw and porps in incidentals
+                        # other_sgts = F,
+                        # other_data,
+                        plot_grp_sz=F,
+                        sgt_colours=NULL,
                         hydrophone = F,
                         facet_month = F,
                         facet_year = F,
                         season=  F,
                         by_seasonYear=F,
+                        rare_spp=F,
                         leg.pos = "bottom",
+                        legend_placement=NULL,
+                        legend_justification=NULL,
+                        legend_spacing=NULL,
+                        legend_margin=NULL,
                         leg.dir = NULL,
                         grid_label = TRUE,
                         coord = NULL,
@@ -44,22 +57,22 @@ plot_survey <- function(sgt_data = NULL,
   # ---------------------------------------------------------------------
   # --------------------------- SET UP DATA -----------------------------
   # ---------------------------------------------------------------------
-  # if(!exists(effort) & single_survey) effort <- T
-  # if(!exists(effort) & !single_survey) effort <- F
-
   if(single_survey){
     if(is.null(sgt_data)) {sgt_data <- ap_sf}
     if(is.null(effort_data)) {effort_data <- effort_lines}
     years <- unique(effort_data$year)
     months <- unique(effort_data$month)
+    survey_title <- paste(month.abb[month], year)
   }else{
     if(is.null(sgt_data)) {sgt_data <- all_ap_sf}
     if(is.null(effort_data)) {effort_data <- all_effort_lines}
     years <- year
     months <- month
+    survey_title <- paste("All surveys to ", month.abb[month], year)
   }
   ap_sf <- sgt_data %>% dplyr::select(year,month,Species,Group_Size,season,seasonYear)
   if(leg.pos=="bottom") {leg.dir <- "horizontal"}else{leg.dir <- "vertical"}
+  if(is.null(legend_margin)) legend_margin <- 0
 
   # ----------------------------------------------------------------------
   # ----------------- LOAD SPATIAL FILES --------------------------------
@@ -95,6 +108,12 @@ plot_survey <- function(sgt_data = NULL,
     coord <- ggplot2::coord_sf(xlim = c(-125.5, -122.9), ylim = c(48.1, 49.44), crs = sf::st_crs(4326))
   }
 
+  if(survey_area & !exists("survey_can")){
+    survey_area <- sf::st_read(dsn = "data", layer = "Full_study_area_UTM9N") %>% st_union() %>%  st_transform(crs = 4326)
+    survey_can <- st_intersection(survey_area,canada_shp)
+    # canada_shp %<>% st_cast("MULTILINESTRING")
+  }
+
   #-----------------------------------------------------------
   #----------------------- BATHYMETRY ------------------------
   #-----------------------------------------------------------
@@ -114,7 +133,7 @@ plot_survey <- function(sgt_data = NULL,
         geom_raster(aes(x=x,y=y,fill = z), data = bathy) +  labs(fill = "Depth (m)") +
         scale_fill_gradientn(colours = col_ramp(20)) +
         theme(legend.position = "bottom",
-              axis.text=element_text(size=12),
+              axis.text=element_text(size=6),
               legend.text=element_text(size=12)
         ) +
         guides(fill = guide_colorbar(title.position = "left"))
@@ -134,15 +153,15 @@ plot_survey <- function(sgt_data = NULL,
       scale_fill_gradientn(colours = col_ramp(20), guide = "none") +
       ggnewscale::new_scale("fill")
   }else{
-    col <- RColorBrewer::brewer.pal(9L, "Blues")[2]
-    bl <- col
-    g <- g +  theme(    panel.background = element_rect(fill="grey90"),
+    # col <- RColorBrewer::brewer.pal(9L, "Blues")[2]
+    # bl <- col
+    g <- g +  theme(    panel.background = element_rect(fill=background),
                         panel.grid.major = element_blank(),
                         panel.grid.minor = element_blank())
   }
   g <- g +
     # geom_sf(data = coast_file, size = 0.1, fill = "light yellow", colour = "grey 60") +
-    geom_sf(data = coast_file, linewidth = 0.01, fill = "light yellow", colour = "grey 60") +
+    geom_sf(data = coast_file, linewidth = 0.05, fill = "grey 70", colour = "grey 30") +
     border
   }
   # if require inset to magnify area of intense sightings
@@ -155,7 +174,7 @@ plot_survey <- function(sgt_data = NULL,
   #   st_as_sf(coords = c("Sgt.Lon", "Sgt.Lat"), crs = 4326) %>%
   #   st_transform(crs= 3156)
 
-
+  if(survey_area) g <- g + geom_sf(data=survey_can, fill="grey90", colour="grey80")
   # ---------------------------------------------------------------------
   # ---------------------------- RAW TRACKS -----------------------------
   # ---------------------------------------------------------------------
@@ -229,7 +248,6 @@ plot_survey <- function(sgt_data = NULL,
     if(!effort_by_day & !effort_by_vis & !effort_by_bf){ #  & !show_transit
 
       if(colour_month){
-
         # mpal <- c(brewer.pal(9, "Purples")[c(3,9)],  # light purple, dark purple
         #           brewer.pal(4, "Dark2")[4], # pink purple
         #           brewer.pal(9, "YlGn")[c(3,9)],  # light green, dark green
@@ -237,29 +255,32 @@ plot_survey <- function(sgt_data = NULL,
         #           brewer.pal(9, "Reds")[c(3,6,9)],  # yellow, orange, red, pink
         #           brewer.pal(9, "Oranges")[c(3,6,9)])[c(1,3,2,4,6,5,7,8,9,10,11,12)] # light orange, brown
         mpal <- c(
-          brewer.pal(9, "YlGnBu")[c(5,7,9)],       # blues
-          brewer.pal(7, "Set3")[7],  # bright green
-          brewer.pal(9, "YlGn")[c(6,9)],  # light green, dark green
-          brewer.pal(9, "RdPu")[c(5,7,9)],  # pink, magenta, purple
-          brewer.pal(9,"Oranges")[c(4,6,9)]) # light orange, orange, brown
-        month_col <- c("Jan" = mpal[1],
-                       "Feb" = mpal[2],
-                       "Mar" = mpal[3],
-                       "Apr" = mpal[4],
+          brewer.pal(8, "Set1"),#[c(5,7,9)],       #
+          brewer.pal(6, "GnBu")[6],  # light blue
+          brewer.pal(5, "Dark2")[c(4,5)],  # dark pink, light green
+          brewer.pal(5, "RdPu")[7],  # purple
+          brewer.pal(9, "YlOrRd")[9])#,       # burgundy
+        # brewer.pal(7, "Set3")[7],  # bright green
+        # brewer.pal(9, "RdPu")[c(3,6,9)])  # pink, magenta, purple
+        # brewer.pal(9,"Oranges")[c(4,6,9)]) # light orange, orange, brown
+        month_col <- c("Jan" = mpal[1], #red
+                       "Feb" = mpal[11], # green
+                       "Mar" = "grey80", #
+                       "Apr" = mpal[2],
                        "May" = mpal[5],
                        "Jun" = mpal[6],
-                       "Jul" = mpal[7],
-                       "Aug" = mpal[8],
-                       "Sep" = mpal[9],
-                       "Oct" = mpal[10],
-                       "Nov" = mpal[11],
-                       "Dec" = mpal[12])
-        if(leg.pos=="bottom") {leg.dir <- "horizontal"}else{leg.dir <- "vertical"}
+                       "Jul" = mpal[12],
+                       "Aug" = mpal[11],
+                       "Sep" = mpal[10],
+                       "Oct" = mpal[7],
+                       "Nov" = mpal[8],
+                       "Dec" = mpal[9])
+        if(by_seasonYear) month_col <- rep(c("green4", "#00008B", "#FF4040"), 4)
 
         g <- g +
           geom_sf(data = effort_data, linewidth = 0.25, aes(colour = month_abb)) +
-          scale_colour_manual(values=month_col, name="Survey effort") +
-          guides(colour = guide_legend(order = 3,override.aes = list(linewidth=1),title.position="top",direction=leg.dir)) + #coord
+          scale_colour_manual(values=month_col, name="Winter     Spring     Summer   Fall") +
+          guides(colour = guide_legend(order = 3,override.aes = list(linewidth=1),title.position="top",direction="horizontal")) + #coord
           ggnewscale::new_scale("colour")
 
       }else{
@@ -276,8 +297,6 @@ plot_survey <- function(sgt_data = NULL,
                          "2026" = ypal[7],
                          "2027" = ypal[8])
 
-          # if(leg.pos=="bottom"){leg.dir <- "horizontal"}else{leg.dir <- "vertical"}
-
           g <- g +
             geom_sf(data = effort_data, linewidth = 0.25, aes(colour = as.character(year))) +
             scale_colour_manual(values=year_col, name="Survey effort") +
@@ -286,10 +305,10 @@ plot_survey <- function(sgt_data = NULL,
 
         }else{
           g <- g +
-            geom_sf(data = effort_data, linewidth = 0.25, colour = effort_colour, aes(colour = "Survey effort")) +
-          # geom_sf(data = effort_data, size = 0.25, aes(colour = "Survey effort"))# +
-          # scale_colour_manual(values=c("Off effort" = "grey60", "On effort" = "black")) +
-          guides(colour = guide_legend(direction="horizontal"))  #    }
+            geom_sf(data = effort_data, linewidth = 0.1, colour = effort_colour, aes(colour = "Survey effort")) +
+            # geom_sf(data = effort_data, size = 0.25, aes(colour = "Survey effort"))# +
+            # scale_colour_manual(values=c("Off effort" = "grey60", "On effort" = "black")) +
+            guides(colour = guide_legend(direction="horizontal"))  #    }
         }
       }
     }
@@ -328,7 +347,7 @@ plot_survey <- function(sgt_data = NULL,
     if(single_survey)  tx <- effort_data %>% data.frame() %>% group_by(SurveyID)
 
     tx %<>% dplyr::summarise(N = n_distinct(SurveyID))
-    g <- g+geom_text(data = tx, aes(x = -124.35, y = 48.9, label = paste0(N, " surveys")), size = 3)
+    g <- g+geom_text(data = tx, aes(x = -124.35, y = 48.9, label = paste0(N, ifelse(N==1, " survey", " surveys"))), size = 2)
   }
 
   if(km){
@@ -345,7 +364,7 @@ plot_survey <- function(sgt_data = NULL,
 
     tx2 %<>% dplyr::summarise(dist = prettyNum(round(sum(length_km),0),
                                                big.mark=","))
-    g <- g+geom_text(data = tx2, aes(x = -124.35, y = 48.75, label = paste0(dist, " km")), size = 3)}
+    g <- g+geom_text(data = tx2, aes(x = -124.35, y = 48.75, label = paste0(dist, " km")), size = 2)}
 
   # ----------------------------------------------------------------------
   # ----------------------------- SIGHTINGS ------------------------------
@@ -359,7 +378,7 @@ plot_survey <- function(sgt_data = NULL,
   # ----------------------------------------------------------------------
   if(plot_sgt){
     if(incidentals){
-      inc <- get_incid(single_survey = single_survey, include_hw_porps = incl_porps) %>%
+      inc <- get_incid(single_survey = single_survey, include_hw_porps = incl_porps, Year=year, Month=month) %>%
         tidyr::separate(GPS.Pos, into = c("lat", "lon"), sep = "N") %>%
         dplyr::mutate(lon = substr(lon, 2, nchar(lon)-3)) %>%
         dplyr::mutate(lat = substr(lat, 1, nchar(lat)-2)) %>%
@@ -381,7 +400,16 @@ plot_survey <- function(sgt_data = NULL,
       if(!nrow(inc)<0) ap_sf <- bind_rows(ap_sf,inc)
     }
 
-    if(!is.null(species)) ap_sf %<>% dplyr::filter(Species %in% species)
+    if(!is.null(species) & length(species) == 1) {
+      ap_sf %<>% dplyr::filter(Species %like% species)
+      species <- tolower(unique(ap_sf$Species))
+    }
+
+    if(!is.null(species) & length(species) > 1) ap_sf %<>% dplyr::filter(Species %in% species)
+
+    ap_sf %<>% mutate(Species = factor(gsub(pattern="killer whale",replacement="KW",.$Species)))
+    species <- gsub("killer whale", "KW", species)
+
 
     # to not display all potential species in legend
     ap_sf$Species %<>% droplevels()
@@ -395,22 +423,29 @@ plot_survey <- function(sgt_data = NULL,
     sp <- unique(c(levels(ap_sf$Species)))
 
     # to size symbols by count
-    ap_sf <- ap_sf %>% mutate(Count =case_when(
-      is.na(Group_Size) ~ "1",
-      Group_Size == 1 ~ "1",
-      Group_Size %in% c(2:5) ~ "2:5",
-      Group_Size >5 ~ ">5"
-    ) %>% factor(levels = c("1", "2:5", ">5")))
+    if(plot_grp_sz){
+      ap_sf <- ap_sf %>% mutate(Count =case_when(
+        is.na(Group_Size) ~ "1",
+        Group_Size == 1 ~ "1",
+        Group_Size %in% c(2:5) ~ "2:5",
+        Group_Size >5 ~ ">5"
+      ) %>% factor(levels = c("1", "2:5", ">5")))
+    }else{
+      ap_sf <- ap_sf %>% mutate(Count = as.factor("1"))
+    }
 
     #-----------------------------------------------------------
     # set colours, shapes, species factor levels
     #-----------------------------------------------------------
     # pal <- RColorBrewer::brewer.pal(12, "Paired")[c(2,4,3)]
-    pal <- brewer.pal(9, "Set1")[c(1:9)] #red,blue,green,purple,orange,yellow,brown,pink,grey
-    hw <- brewer.pal(8, "Reds")[8]   # better sizing for publications (?)
-    hp <- brewer.pal(8, "Greens")[8] # better sizing for publications (?)
-    dp <- brewer.pal(8, "Purples")[8]# better sizing for publications (?)
+    pal <- RColorBrewer::brewer.pal(9, "Set1")[c(1:9)] #red,blue,green,purple,orange,yellow,brown,pink,grey
+    # hw <-  RColorBrewer::brewer.pal(8, "Reds")[8]
+    # hp <-  RColorBrewer::brewer.pal(8, "Greens")[8]
+    # dp <-  RColorBrewer::brewer.pal(8, "Purples")[8]
 
+    if(!is.null(sgt_colours)) {
+      cols <- sgt_colours
+    }else{
     cols <-   c("Pacific white-sided dolphin" = pal[8], #pink
                 # "Humpback whale" = hw, #red
                 "Humpback whale" = pal[1], #red
@@ -418,57 +453,191 @@ plot_survey <- function(sgt_data = NULL,
                 "Harbour porpoise" = pal[3], #green
                 # "Dall\'s porpoise" = dp, #purple
                 "Dall\'s porpoise" = pal[4], #purple
-                "Unknown porpoise" = pal[6], #yellow
-                "Killer whale - northern resident" = "black",
-                "Killer whale - southern resident" = "black",
-                "Killer whale - Bigg\'s" = "black",
-                "Killer whale - unknown ecotype" = "black",
+                "Unknown porpoise" = pal[7], #yellow
+                "KW - northern resident" = "black",
+                "KW - southern resident" = "black",
+                "KW - Bigg\'s" = "black",
+                "KW - unknown ecotype" = "black",
                 "Fin whale" = pal[5], #orange
-                "Grey whale" = pal[9], #grey
-                "Minke whale" = pal[7]) #brown
-
-    shape <- c("Pacific white-sided dolphin" = 23, #diamond
-               "Humpback whale" = 21, #circle
-               "Harbour porpoise" = 21,
-               "Dall\'s porpoise" = 21,
-               "Unknown porpoise" = 21,
-               "Killer whale - northern resident" = 24, #triangle
-               "Killer whale - southern resident" = 25, #upside down triangle
-               "Killer whale - Bigg\'s" = 22,           #circle
-               "Killer whale - unknown ecotype" = 21,   #square
-               "Fin whale" = 21,
-               "Grey whale" = 21,
-               "Minke whale" = 21)
-
-
-    #-------------------------------------------------------------------
-
-    if(!is.null(species)){ # make it have shp legend if sp = KW
-      shp= "none"
-      fl= "none"
-    }else{
-      shp = guide_legend(ncol=1,order = 1,override.aes = list(size=2),title.position = "top")
-      fl =  guide_legend(ncol=1,order = 1)
+                "Fin whale - off effort" = "red",
+                "Grey whale - off effort" = "blue", #grey
+                "Grey whale" = "blue", #grey
+                "Minke whale - off effort" = pal[6], #brown
+                "Minke whale" = pal[6]) #brown
     }
 
-    if(is.null(leg.dir) & leg.pos=="bottom"){leg.dir <- "horizontal"}else{leg.dir <- "vertical"}
+    if(!is.null(species)){
+      shape <- c("Pacific white-sided dolphin" = 23, #diamond
+                 "Humpback whale" = 21, #circle
+                 "Harbour porpoise" = 21,
+                 "Dall\'s porpoise" = 21,
+                 "Unknown porpoise" = 21,
+                 # "KW - northern resident" =21,#= 24, #triangle
+                 # "KW - southern resident"=21,# = 25, #upside down triangle
+                 # "KW - Bigg\'s" = 21,#,           #circle
+                 # "KW - unknown ecotype"=21,# = 21,   #square
+                 "Fin whale" = 23,
+                 "Fin whale - off effort" = 23,
+                 "Grey whale - off effort" = 23,
+                 "Grey whale" = 23,
+                 "Minke whale - off effort" = 23,
+                 "Minke whale" = 23,
+                 "KW - all ecotypes" = 21)
+    }
 
-    g <- g + geom_sf(data = ap_sf, alpha = 0.85, colour="black",stroke=0.1,
-                     aes(fill = Species, shape = Species, size = Count)) +#
+    if(!is.null(species) & (any(species %like% "killer" | any(species %like% "KW")))){
+      shape <- c(
+        "Pacific white-sided dolphin" = 23, #diamond
+        "Humpback whale" = 21, #circle
+        "Harbour porpoise" = 21,
+        "Dall\'s porpoise" = 21,
+        "Unknown porpoise" = 21,
+        "Fin whale" = 23,
+        "Fin whale - off effort" = 23,
+        "Grey whale - off effort" = 23,
+        "Grey whale" = 23,
+        "Minke whale - off effort" = 23,
+        "Minke whale" = 23,
 
-      scale_size_manual(values = c(1.25,2,3), name="Group Size",  guide = guide_legend(direction = leg.dir)) +
-      # scale_size_manual(values = c(0.7,1.1,1.6), name="Group Size") +  # better sizing for publications (?)
-      scale_fill_manual(values = cols, breaks = sp, name = "Species Sightings")   +
-      scale_shape_manual(values = shape, breaks = sp, name = "Species Sightings") +
-      ggnewscale::new_scale("shape")
-    guides(alpha= "none",
-           shape=shp,
-           fill=fl,
-           size =  guide_legend(title.position = "top")) #ncol=1,order = 2,
-    # annotation_custom(leg1, xmin=-119.1, xmax=-124.95, ymin=47.95, ymax=48.1) +
+        "KW - northern resident" =24, #triangle
+        "KW - southern resident"=25, #upside down triangle
+        "KW - Bigg\'s" = 22,#,           #circle
+        "KW - unknown ecotype"=21)# = 21,   #square
+    }
+    #-------------------------------------------------------------------
 
+    # if(is.null(species) | length(sp)==1){ # make it have shp legend if sp = KW
+    #   shp= "none"
+    #   fl= "none"
+    # }else{
+      shp = guide_legend(ncol=1,order = 1,override.aes = list(size=2),title.position = "top")
+      fl =  guide_legend(ncol=1,order = 1)
+    # }
 
+    ####################################################################
+    ####################################################################
+    #  EDIT AUG 20 DUE TO ERROR WITH SIZE=COUNT
+    ####################################################################
+    ####################################################################
+
+    # if(spec_order){
+    #   for(i in species){
+    #     x <- ap_sf %>% filter(Species==i)
+    #     g <- g + geom_sf(data = x, alpha = 0.9, colour="black",stroke=0.1,
+    #                      aes(fill = Species, shape = Species, size = Count))
+    #   }
+    # }else{
+    #   g <- g + geom_sf(data = ap_sf, alpha = 0.9, colour="black",stroke=0.1,
+    #                    aes(fill = Species, shape = Species, size = Count))}
+    #################### spec_order ##############################
+    #################### grp sz ##############################
+    if(spec_order){
+      if(plot_grp_sz){
+        for(i in species){
+          x <- ap_sf %>% filter(Species==i)
+          g <- g + geom_sf(data = x, alpha = 0.9, colour="black",stroke=0.1,
+                           aes(fill = Species, shape = Species, size = Count)) +
+            scale_fill_manual(values = cols, breaks = sp, name = NULL, guide=fl )   +
+            scale_shape_manual(values = shape, breaks = sp, name = NULL, guide=shp) +
+            ggnewscale::new_scale("shape") +
+            ggnewscale::new_scale("fill") +
+            guides(alpha= "none",
+                   shape=shp,
+                   colour="none",
+                   fill=fl)
+        }
+      }else{
+        #################### NOT grp sz ##############################
+
+        for(i in species){
+          x <- ap_sf %>% filter(Species==i)
+          g <- g + geom_sf(data = x, alpha = 0.9, colour="black",stroke=0.1,
+                           aes(fill = Species, shape = Species, size = 0.75)) +
+            scale_fill_manual(values = cols, breaks = sp, name = NULL, guide=fl )   +
+            scale_shape_manual(values = shape, breaks = sp, name = NULL, guide=shp) +
+            ggnewscale::new_scale("shape") +
+            ggnewscale::new_scale("fill") +
+            guides(alpha= "none",
+                   shape=shp,
+                   colour="none",
+                   fill=fl)+
+            scale_size_manual(values = c(1.4, 2.4, 3), name="  Group Size") +
+            guides(size=guide_legend(direction = leg.dir))
+        }
+      }
+    }else{
+      #################### NOT spec_order ##############################
+      #################### grp sz ##############################
+
+      if(plot_grp_sz){
+        g <-      g + geom_sf(data = ap_sf, alpha = 0.9, colour="black",stroke=0.1,
+                              aes(fill = Species, shape = Species, size = Count)) +#
+          # scale_size_manual(values = c(1,2,3), name="Group Size") +
+          scale_fill_manual(values = cols, breaks = sp, name = NULL, guide=fl )   +
+          scale_shape_manual(values = shape, breaks = sp, name = NULL, guide=shp) +
+          ggnewscale::new_scale("shape") +
+          ggnewscale::new_scale("fill") +
+          guides(alpha= "none",
+                 shape=shp,
+                 colour="none",
+                 fill=fl)+
+          scale_size_manual(values = c(1.4, 2.4, 3), name="  Group Size") +
+          guides(size=guide_legend(direction = leg.dir))
+      }else{
+        #################### NOT grp sz ##############################
+                g <-      g + geom_sf(data = ap_sf, alpha = 0.9, colour="black",stroke=0.1,
+                              aes(fill = Species, shape = Species, size = Count)) +#
+          # scale_size_manual(values = c(1,2,3), name="Group Size") +
+          scale_fill_manual(values = cols, breaks = sp, name = NULL, guide=fl )   +
+          scale_shape_manual(values = shape, breaks = sp, name = NULL, guide=shp) +
+          ggnewscale::new_scale("shape") +
+          ggnewscale::new_scale("fill") +
+          guides(alpha= "none",
+                 shape=shp,
+                 colour="none",
+                 fill=fl)+
+          scale_size_manual(values = c(2), name="") +
+          guides(size="none")
+      }
+
+    }
+    ###################################################################
+    ###################################################################
+
+    # if(other_sgts){
+    #   g <- g +
+    #     geom_sf(data=other_data, aes(fill=Species, shape=Species))# +
+    #     # scale_fill_manual(values=c("green","blue","red"))
+    # }
+    ###################################################################
+    # no longer need with edit Aug 10
+    ###################################################################
+        # g <- g +#
+    #   # scale_size_manual(values = c(1,2,3), name="Group Size") +
+    #   scale_fill_manual(values = cols, breaks = sp, name = NULL, guide=fl )   +
+    #   scale_shape_manual(values = shape, breaks = sp, name = NULL, guide=shp) +
+    #   ggnewscale::new_scale("shape") +
+    #   ggnewscale::new_scale("fill") +
+    #   guides(alpha= "none",
+    #          shape=shp,
+    #          colour="none",
+    #          fill=fl
+    #          # size =  guide_legend(direction = leg.dir)
+    #   ) #ncol=1,order = 2,title.position = "top",
+    # # annotation_custom(leg1, xmin=-119.1, xmax=-124.95, ymin=47.95, ymax=48.1) +
+    #
+    # if(plot_grp_sz){
+    #   g <- g +
+    #     scale_size_manual(values = c(1.4, 2.4, 3), name="  Group Size") +
+    #     guides(size=guide_legend(direction = leg.dir))
+    # }else{
+    #   g <- g +
+    #     scale_size_manual(values = c(2), name="") +
+    #     guides(size="none")
+    # }
+    ###################################################################
   }
+
   #-----------------------------------------------------------
   # to add in hydrophone deployment position(s)
   #-----------------------------------------------------------
@@ -505,25 +674,40 @@ plot_survey <- function(sgt_data = NULL,
   # ----------------------------- FINAL PLOT -----------------------------
   # ----------------------------------------------------------------------
 
+
   # if(leg.pos=="bottom"){leg.dir <- "horizontal"}else{leg.dir <- "vertical"}
   g <- g +
     theme(
       # plot.margin = unit(c(0,0,0,0), "cm"),
-      axis.text.x = element_text(angle=90),
-      axis.text = element_text(size=9),
+      axis.text.x = element_text(angle=45,vjust=0.7, size=6),
+      axis.text.y = element_text(angle=45, size=7),
       legend.key = element_blank(),
-      legend.position = leg.pos,
       legend.direction = "vertical",
-      legend.text = element_text(size=9),#size=fig_legend_size
-      legend.title = element_text(size=10), #change legend title font size
-      legend.margin = margin(0)#,
+      legend.text = element_text(size=7),#size=fig_legend_size
+      legend.title = element_text(size=8), #change legend title font size
+      legend.margin = margin(legend_margin)
       # legend.key.size = unit(0.1,"cm")
     )
+
+  if(leg.pos=="inside"){
+    g <- g +
+      theme(legend.box = "horizontal",
+            # legend.position=c(0.07, 0.86)
+            legend.position=legend_placement,
+            legend.justification =legend_justification,
+            legend.background = element_rect(colour="black"),
+            legend.box.margin = legend_margin
+            ) # legend.background
+  }else{
+    g <- g + theme(legend.position = leg.pos)
+
+  }
 
   if(!grid_label) g <- g+theme(axis.text.x = element_blank (),
                                axis.ticks.x = element_blank (),
                                axis.text.y = element_blank (),
                                axis.ticks.y = element_blank ())
+
 
   g <- g +
     coord +
@@ -539,7 +723,7 @@ plot_survey <- function(sgt_data = NULL,
 
   if(!is.null(title)) g <- g + ggtitle(title)
 
-  if(by_seasonYear) {
+  if(by_seasonYear & !rare_spp) {
     g <- g +
       theme(axis.text.x = element_blank(),
             axis.text = element_blank(),
@@ -562,6 +746,13 @@ plot_survey <- function(sgt_data = NULL,
 
     # # Draw the plot - below
 
+  }else{
+    g <- g +
+      theme(axis.text.x = element_blank(),
+            axis.text = element_blank(),
+            axis.ticks.x = element_blank(),
+            axis.ticks.y = element_blank())# +
+      # facet_wrap(season ~ year)
   }
 
   # TO ADD TITLE WHEN FILTERED BY SPECIES (NOT CURRENTLY NEEDED SINCE LEGEND)
@@ -591,20 +782,25 @@ plot_survey <- function(sgt_data = NULL,
 
   if(save & !by_seasonYear){
     if(single_survey){
-      if(is.null(file_name)) file_name <- paste0("C:/Users/keppele/Documents/CeMoRe/Analysis/cemore_analysis/output_maps/summary_map_",survey_title,".png")
+      if(is.null(file_name)) file_name <- paste0("C:/Users/keppele/Documents/CeMoRe/Analysis/cemore_analysis/output_maps_cemore/summary_map_",survey_title,".png")
     }else{
-      if(is.null(file_name)) file_name <- paste0("C:/Users/keppele/Documents/CeMoRe/Analysis/cemore_analysis/output_maps/all_cemore_sightings_to_",survey_title,".png")
+      if(is.null(file_name)) file_name <- paste0("C:/Users/keppele/Documents/CeMoRe/Analysis/cemore_analysis/output_maps_cemore/all_cemore_sightings_to_",survey_title,".png")
     }
     ggsave(file_name, height = 15, width = 15, units = "cm")
   }
 
-  if(save & by_seasonYear){
+  if(save & by_seasonYear & !rare_spp){
     if(is.null(file_name)) file_name <- paste0("C:/Users/keppele/Documents/CeMoRe/Analysis/cemore_analysis/output_maps/seasonal_track_to_",survey_title,".png")
     png(file_name);grid.newpage; grid.draw(g1); dev.off()}
 
-  if(!by_seasonYear & print) print(g)
-  if(by_seasonYear & print) {grid.newpage();  grid.draw(g1)}
-if(by_seasonYear & !print) g <- g1
-# print(g)
+  if(save & by_seasonYear & rare_spp){
+    if(is.null(file_name)) file_name <- paste0("C:/Users/keppele/Documents/CeMoRe/Analysis/cemore_analysis/output_maps/seasonal_track_to_",survey_title,".png")
+    ggsave(file_name, height = 15, width = 15, units = "cm")
+  }
+
+  if(!by_seasonYear & print) return(g); print(g)
+  if(by_seasonYear & print & !rare_spp) {grid.newpage();  grid.draw(g1)}
+  if(by_seasonYear & print & rare_spp) return(g); print(g)
+  if(by_seasonYear & !print & !rare_spp) g <- g1
 }
 
