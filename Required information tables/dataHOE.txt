@@ -7,16 +7,22 @@
 "John P Tully","TU","Br",11.100000000,12.800000000,"HOE = 1.7m to eye + HOP"
 "John P Tully","TU","Mo",13.800000000,15.500000000,"HOE = 1.7m to eye + HOP"
 "WE Ricker","RI","Br",9.140000000,10.840000000,
-"Vector","VE","Br",6.400000000,8.080000000,
+"Vector","VE","Br",6.400000000,8.000000000,"HOE = 1.6m to eye + HOP"
 "Tanu","TA","Br",6.000000000,7.770000000,"HOE = 1.7m to eye + HOP"
 "Tanu","TA","Mo",8.600000000,10.300000000,"HOE = 1.7m to eye + HOP"
 "Gordon Reid","GR","Br",8.200000000,9.900000000,
 "Gordon Reid","GR","Mo",10.200000000,11.900000000,
 "Curve of Time","CT",,,,
 "Acheiver","ACH","Platform",,5.000000000,"Williams & Thomas 2007"
-"Manyberries", "MB", "Bo",1.25,1.6,"HOE = 1.6m to eye + HOP"
-"Manyberries", "MB", "Br",1.25,1.6,"HOE = 1.6m to eye + HOP"
-"Roller Bay", "RB", "RBbridge",,,
+"Manyberries", "MB", "Bo",1.25,2.85,"HOE = 1.6m to eye + HOP"
+"Manyberries", "MB", "Br",0.86,2.46,"HOE = 1.6m to eye + HOP"
+"Roller Bay", "RB", "RBbridge",2,3.6,"HOE = 1.6m to eye + HOP"
 "Roller Bay", "RB", "RBFly_sit",2.74,3.60,"FB=fly bridge"
 "Roller Bay", "RB", "RBFly_stand",2.74,4.34,"FB=fly bridge"
-"Franklin", "FR", "Fujinon_FranklinMI","Mo",14.95,16.65,"HOE = 1.7 m to eye + HOP
+"Franklin", "FR", "Fujinon_FranklinMI", 14.95,16.65, "HOE = 1.7m to eye + HOP"
+"CharleyC", "CC", "Fujinon_CC", 0.0, 1.75,"HOE = 1.75m to eye"
+"GreatNorthern", "GN", "Fujinon_GN", 0.0, 1.75,"HOE = 1.75m to eye"
+"TitanJunior", "TJ", "Fujinon_TJ", 0.0, 1.75,"HOE = 1.75m to eye"
+"Tiriarnaq","TI", "Fujinon_TI_MI", 3.38, 1.7,"HOE = 5.08m to eye"
+"Tiriarnaq","TI", "Fujinon_TI_BOW", 1.43, 1.7,"HOE = 3.18m to eye"
+"CeMoRe", "CE", "Bo",1.25,1.6,"HOE = 1.6m to eye + HOP"

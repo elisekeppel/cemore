@@ -4,7 +4,7 @@
 \alias{get_effort_lines}
 \title{get_effort_lines}
 \usage{
-get_effort_lines(effort)
+get_effort_lines(effort, rare_obs = NULL, data.source = "cemore")
 }
 \arguments{
 \item{effort}{}

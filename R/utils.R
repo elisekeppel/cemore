@@ -25,3 +25,29 @@ autofill_side <- function(s){
   }
   s
 }
+
+standardize <- function(x) {
+  if(length(unique(x))>2){
+    return((x-mean(x, na.rm=T))/(2*sd(x, na.rm=T)))
+  } else {
+    return(x)
+  }
+}
+
+binned <- function(x, breaks = NULL, min = NULL, max = NULL, by = NULL, dec=2){
+  if(is.null(breaks)){
+    if(is.null(min)) min <- min(x)
+    if(is.null(max)) max <- max(x)
+    if(is.null(by)) by <- (abs(min-max))/sqrt(mean(x))/2
+    # br = seq(min, max, by)
+    breaks = pretty(seq(min, max, by))
+  }
+  # if(!max(br) == max) br = c(seq(min, max, by), max)
+  ranges = paste(head(breaks,-1), breaks[-1], sep=" - ")
+  freq   = hist(x, breaks=breaks, include.lowest=TRUE, plot=FALSE)
+  data.frame(range = ranges, frequency = freq$counts)
+}
+
+col_name_diff <- function(dat1, dat2){
+  names(dat1)[which(!names(dat1) %in% names(dat2))]
+}

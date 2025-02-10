@@ -612,11 +612,42 @@ load_sightings <- function(year, month, single_survey = T, vessel=NULL,dir=NULL,
   # KW ecotype updates as determined by Lisa Spaven after looking at mysti comments and BCCSN records
   # updated May 21, 2024
   #########################################################
-  if(!single_survey){
-    ap_sf[which(ap_sf$time_index=="2021-03-02 15:38:02"),]$Species <- "killer whale - Bigg's"
-    ap_sf[which(ap_sf$time_index=="2021-10-13 13:25:26"),]$Species <- "killer whale - southern resident"
+  # if(!single_survey){
+    # ap_sf[which(ap_sf$time_index=="2021-03-02 15:38:02"),]$Species <- "killer whale - Bigg's"
+    # ap_sf[which(ap_sf$time_index=="2021-10-13 13:25:26"),]$Species <- "killer whale - southern resident"
     # ap_sf[which(ap_sf$time_index=="2022-04-27 09:53"),]$Species <- "killer whale - Bigg's" ### NOT YET ON EFFORT FOR THE DAY
+
+    # update kw ecotypes
+    # nov 28, 2024
+
+  # 2021
+  if(year==2021){
+    if(month==1){
+      ap_sf[which(ap_sf$time_index=="2021-01-20 14:30:09"),]$Species <- "killer whale - southern resident"
+      ap_sf[which(ap_sf$time_index=="2021-01-20 14:58:26"),]$Species <- "killer whale - southern resident"
+    }else if(month==3){
+      ap_sf[which(ap_sf$time_index=="2021-03-02 15:38:02"),]$Species <- "killer whale - Bigg's"
+    }else if(month==10){
+      ap_sf[which(ap_sf$time_index=="2021-10-13 13:25:26"),]$Species <- "killer whale - southern resident"
+    }else if(month==11){
+      ap_sf[which(ap_sf$time_index=="2021-11-18 15:39:52"),]$Species <- "killer whale - southern resident"
+    }
+  }else if(year==2022){
+    if(month==1){
+      ap_sf[which(ap_sf$time_index=="2022-01-22 13:33:51"),]$Species <- "killer whale - southern resident"
+    }else if(month==6){
+      ap_sf[which(ap_sf$time_index=="2022-06-11 10:49:20"),]$Species <- "killer whale - Bigg's"
+    }else if(month==8){
+      ap_sf[which(ap_sf$time_index=="2022-08-23 17:03:11"),]$Species <- "killer whale - Bigg's"
+    }else if(month==10){
+      ap_sf[which(ap_sf$time_index=="2022-10-12 11:18:51"),]$Species <- "killer whale - Bigg's"
+    }
   }
+  # ap_sf[which(ap_sf$time_index=="2022-04-26 11:52:53"),]$Species <- STILL UNKNOWN
+  # ap_sf[which(ap_sf$time_index=="2022-04-27 09:53:X"),]$Species <- "killer whale - Bigg's" INCIDENTAL ### NOT YET ON EFFORT FOR THE DAY
+  # ap_sf[which(ap_sf$time_index=="2022-07-25 15:23:xx"),]$Species <- STILL UNKNOWN
+  # ap_sf[which(ap_sf$time_index=="2022-10-14 09:47:xx"),]$Species <- STILL UNKNOWN
+
   ap_sf
 
 }
@@ -732,7 +763,7 @@ survey_summary <- function(single=T,
 
   # counts by month and species
   summary[[2]] <- s %>%
-    dplyr::group_by(year, season, SurveyID, Species) %>% #Year = year(GpsT), Month = month(GpsT)
+    dplyr::group_by(year, month, season, SurveyID, Species) %>% #Year = year(GpsT), Month = month(GpsT)
     dplyr::summarise(number_sightings = n(), number_individuals = sum(Group_Size))
   if(save) write.csv(summary[[2]], paste0("output_", data.source,"/sightings_summary/",data.source,"_species_summary_", year, tolower(month), ".csv"), row.names = FALSE)
   # rm(s)

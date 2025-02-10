@@ -16,7 +16,7 @@ data$effort$Swell[which(data$effort$Swell == "None")] <- "No swell"
 data$effort %<>% mutate(gsub("<25%", "0%-25%", Cloud.Cover))
 data$effort %<>% mutate(iteration = iteration)
 
-if(!survey$Vessel_code == "FR") data$effort$Franklin.Hut <- NA
+if(!survey$vessel == "FR") data$effort$Franklin.Hut <- NA
 #data$effort[which(!is.na(data$effort$Transect.ID)),] %<>% mutate(Transect.ID = paste(iteration, Transect.ID, sep = "-"))
 
 
@@ -82,21 +82,6 @@ for(i in 1:length(track.list)) { #upload all GPS tables
   #################################
 
   write.csv(x, track.files[i], row.names=F)
-  # if(!is.null(data$Sightings$Distance..km.)) {
-  #   data$Sightings %<>% rename(Distance..m. = Distance..km.) %>% mutate(Distance..m.=Distance..m.*1000)
-  # }
-  # if(!is.null(data$Sightings$Sgt.Dist..km.)) {
-  #   data$Sightings %<>% rename(Sgt.Dist..m. = Sgt.Dist..km.) %>% mutate(Sgt.Dist..m.=Sgt.Dist..m.*1000)
-  # }
-  #
-  # if(!is.null(data$Sightings$Psd..km.)) {
-  #   data$Sightings %<>% rename(Psd..m. = Psd..km.) %>% mutate(Psd..m.=Psd..m.*1000)
-  # }
-  # if(is.null(data$Time.Created)){
-  #   data$Time.Created <- data$Time.Created..UTC..1
-  #   data$Time.Created..UTC..1 <- NULL
-  #   write.csv(data, track.files[i], row.names=F)
-  # }
 }
 
 # ----------------------------------------------------------------------
@@ -438,6 +423,12 @@ if(year == 2024 & tolower(month_abb) == "aug"){
 
   data$sightings[which(is.na(data$sightings$time_local)),]$time_local <- data$sightings[which(is.na(data$sightings$time_local)),]$time_index
 
+}
+
+
+if(year == 2024 & tolower(month_abb) == "oct"){
+  data$effort[which(data$effort$STBD.Visibility=="Excellent/GoodModerate"),]$STBD.Visibility <- "Excellent/Good"
+  data$effort[which(data$effort$PORT.Visibility=="Excellent/GoodModerate"),]$PORT.Visibility <- "Excellent/Good"
 }
 
 

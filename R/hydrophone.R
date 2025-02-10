@@ -26,8 +26,7 @@
 
 library(dplyr)
 library(lubridate)
-# library(magrittr)
-library(rgdal)
+# library(rgdal)
 library(sf)
 library(magrittr)
 # Oct 2021

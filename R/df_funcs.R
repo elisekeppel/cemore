@@ -40,15 +40,33 @@ plot_df <- function(species, df, details=T, showpoints=T,bins=NULL, qq=T, ylabel
   if(details){
     usr <- par("usr")   # save old user/default/system coordinates
     par(usr = c(0, 1, 0, 1)) # new relative user coordinates
-    text(x=0.95, y=0.94, label=paste(species),adj=c(1,1), font=3, cex=1.2)
-    text(x=0.95, y=0.89, label=paste(formula),adj=c(1,1))
-    text(x=0.95, y=0.84, label=paste("truncation = ",tr, " km"),adj=c(1,1))
-    text(x=0.95, y=0.79, label=paste("esw = ",esw, " km"),adj=c(1,1))
-    text(x=0.95, y=0.74, label=paste("n = ", n),adj=c(1,1))
+    text(x=0.96, y=0.98, label=paste(species),adj=c(1,1), cex= 25.4 / 72.27 * 3) # font=3, italics
+    text(x=0.96, y=0.89, label=paste(formula),adj=c(1,1), cex= 25.4 / 72.27 * 3)
+    # text(x=0.96, y=0.84, label=paste("Truncation = ",tr, " km"),adj=c(1,1), cex= 25.4 / 72.27 * 3)
+    text(x=0.96, y=0.84, label=paste("esw = ",esw, " km"),adj=c(1,1), cex= 25.4 / 72.27 * 3)
+    # text(x=0.96, y=0.79, label=paste("esw = ",esw, " km"),adj=c(1,1), cex= 25.4 / 72.27 * 3)
+    text(x=0.96, y=0.79, label=paste("n = ", n),adj=c(1,1), cex= 25.4 / 72.27 * 3)
     par(usr = usr) # restore original user coordinates
   }
   # if(details){
   # text(0.7*tr, 0.9, paste(key, adj, ord, ":", as.character(tr), " km", sep = " "))
   # }
   # title(paste(species), font.main = 1)
+}
+
+
+get_h_t_abund <- function(mod, A=NULL, l=NULL){
+  if(is.null(A)) A <- mod$dht$individuals$summary$Area
+  if(is.null(l)) l <- mod$dht$individuals$summary$Effort
+  w <- mod$ddf$meta.data$width
+  a <- 2 * l * w
+
+  group_sizes <- mod$ddf$data$size
+  probs <- predict(mod)$fitted
+  Nhat <- (A/a) * sum(group_sizes/probs)
+  round(Nhat,0)
+}
+
+get_avg_p <- function(mod){
+  summary(mod)$ds$average.p %>% round(4)
 }

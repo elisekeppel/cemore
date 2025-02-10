@@ -69,7 +69,9 @@ if(exists("sightings")){
 }
 
 # tryCatch(survey <- read.table(paste(getwd(),u,"Survey data",u,surveyid,"_dataSurveyID.txt", sep=""), sep=",", header=TRUE, stringsAsFactors = FALSE, strip.white = TRUE, na.strings = c("NA","na","n/a","N/A","")), error = function(e) {paste("Oops! Are you sure '",surveyid,"_dataSurveyID.txt' is saved in the 'Survey data' folder?",sep="")}, warning = function(w) {paste("Oops! Are you sure '",surveyid,"_dataSurveyID.txt' is saved in the 'Survey data' folder?",sep="")})
-tryCatch(survey <- read.table(paste(getwd(),u,data_path,u,surveyid,"_dataSurveyID.txt", sep=""), header=TRUE, stringsAsFactors = FALSE, strip.white = TRUE, na.strings = c("NA","na","n/a","N/A","")), error = function(e) {paste("Oops! Are you sure '",surveyid,"_dataSurveyID.txt' is saved in the 'Survey data' folder?",sep="")}, warning = function(w) {paste("Oops! Are you sure '",surveyid,"_dataSurveyID.txt' is saved in the 'Survey data' folder?",sep="")})
+# tryCatch(survey <- read.table(paste(getwd(),u,data_path,u,surveyid,"_dataSurveyID.txt", sep=""), header=TRUE, stringsAsFactors = FALSE, strip.white = TRUE, na.strings = c("NA","na","n/a","N/A","")), error = function(e) {paste("Oops! Are you sure '",surveyid,"_dataSurveyID.txt' is saved in the 'Survey data' folder?",sep="")}, warning = function(w) {paste("Oops! Are you sure '",surveyid,"_dataSurveyID.txt' is saved in the 'Survey data' folder?",sep="")})
+tryCatch(survey <- readRDS("C:/users/keppele/documents/cemore/analysis/cemore_analysis/survey_data/surveys.rds"))
+survey <- survey[which(survey$SurveyID == surveyid),]
 
 if(exists("survey")){
   cat("Survey info file upload successful!\n\n")
@@ -196,7 +198,9 @@ if(length(which(nn %ni% colnames(sightings)))!=0){
   stop(paste("Column name(s) in Sightings.csv are missing or misspelled. We are looking for:", toString(nn[which(nn %ni% colnames(sightings))]), sep = " "), call. = FALSE)
 }
 
-nn <- c("SurveyID","Tasking","Vessel_code","VesselID","Analysis_Status","Analytical_Approach","Date_Start_GMT","Date_End_GMT","Total_Days","TotalONEFFAreakmsqd","TotalONEFFDistancekm","TotalONEFFTimehr","TotalOFFTimehr","TotalONCefforts","TotalONCTimehr","TotalONEFFsurveysightings","TotalONEFFanimalcount","Totalothersightings","Totalotheranimalcount","Date_Analysed")
+# nn <- c("SurveyID","Tasking","vessel","VesselID","Analysis_Status","Analytical_Approach","Date_Start_GMT","Date_End_GMT","Total_Days","TotalONEFFAreakmsqd","TotalONEFFDistancekm","TotalONEFFTimehr","TotalOFFTimehr","TotalONCefforts","TotalONCTimehr","TotalONEFFsurveysightings","TotalONEFFanimalcount","Totalothersightings","Totalotheranimalcount","Date_Analysed")
+nn <- c("SurveyID","vessel","Date_Start_GMT","Date_End_GMT","field_days")
+# ,"Tasking","VesselID","Analysis_Status","Analytical_Approach","TotalONEFFAreakmsqd","TotalONEFFDistancekm","TotalONEFFTimehr","TotalOFFTimehr","TotalONCefforts","TotalONCTimehr","TotalONEFFsurveysightings","TotalONEFFanimalcount","Totalothersightings","Totalotheranimalcount","Date_Analysed"
 if(length(which(nn %ni% colnames(survey)))!=0){
   beep(10)
   stop(paste("Column name(s) in dataSurveyID.txt are missing or misspelled. We are looking for:", nn[which(nn %ni% colnames(survey))], sep = " "), call. = FALSE)
@@ -223,7 +227,8 @@ for(j in index) {effort[,j]<-gsub("[[:space:]]","",effort[,j])}
 # for(j in index) {ship[,j]<-gsub("[[:space:]]","",ship[,j])}
 index<-which(names(sightings) %in% c("Sgt.Id","Bearing","Reticle.Instr","Side","Obs"))
 for(j in index) {sightings[,j]<-gsub("[[:space:]]","",sightings[,j])}
-index<-which(names(survey) %in% c("SurveyID","Vessel_Code","Tasking"))
+# index<-which(names(survey) %in% c("SurveyID","vessel","Tasking"))
+index<-which(names(survey) %in% c("SurveyID","vessel"))
 for(j in index) {survey[,j]<-gsub("[[:space:]]","",survey[,j])}
 cat("DONE")
 
@@ -256,7 +261,7 @@ if(length(unique(gps$Time.Created))!=nrow(gps)){
 }
 
 #Date-time variables
-gps$Time.Created <- gsub("T"," ", gps$Time.Created)
+gps$Time.Created <-try(gsub("T"," ", gps$Time.Created))
 gps$Time.Created <- as.POSIXct(strptime(gps$Time.Created,format = "%Y-%m-%d %H:%M:%S"),tz="America/Vancouver")
 
 if(sum(is.na(gps$Time.Created))!=0){
@@ -420,12 +425,16 @@ for(j in index) {
 }
 survey[,index]<-lapply(index, function(x) as.numeric(as.character(survey[,x])))
 #Character variables
-cv <- c("SurveyID","VesselID","Vessel_Code","Tasking","Analysis_Status", "Analytical_Approach", "Date_Analysed")
+# cv <- c("SurveyID","VesselID","vessel","Tasking","Analysis_Status", "Analytical_Approach", "Date_Analysed")
+cv <- c("SurveyID","vessel")
 index <- which(names(survey) %in% cv)
 survey[,index]<-lapply(index, function(x) as.character(survey[,x]))
 #Date-time variables
-survey$Date_Start_GMT <- as.POSIXct(strptime(survey$Date_Start_GMT,format = "%Y-%m-%d %H:%M:%S"),tz="GMT")
-survey$Date_End_GMT <- as.POSIXct(strptime(survey$Date_End_GMT,format = "%Y-%m-%d %H:%M:%S"),tz="GMT")
+# survey$Date_Start_GMT <- as.POSIXct(strptime(survey$Date_Start_GMT,format = "%Y-%m-%d %H:%M:%S"),tz="GMT")
+# survey$Date_End_GMT <- as.POSIXct(strptime(survey$Date_End_GMT,format = "%Y-%m-%d %H:%M:%S"),tz="GMT")
+# EK edit don't need time in survey table
+survey$Date_Start_GMT <- as.POSIXct(strptime(survey$Date_Start_GMT,format = "%Y-%m-%d"),tz="GMT")
+survey$Date_End_GMT <- as.POSIXct(strptime(survey$Date_End_GMT,format = "%Y-%m-%d"),tz="GMT")
 if(sum(is.na(survey$Date_Start_GMT))==nrow(survey) | sum(is.na(survey$Date_End_GMT))==nrow(survey)){
   #beep(10)
   stop("Oops! The Date and Time format in the dataSurveyID table is not correct. Make sure that the Regional settings on your computer have 'short date' format set to yyyy-MM-dd and 'long time' format set as HH:mm:ss, re-save the dataSurveyID table, and re-run this code.", call. = FALSE)
@@ -454,11 +463,11 @@ if(nrow(survey[which(survey$SurveyID %in% surveyid),])!=1){
   }
 }
 #Store the vessel code name for the survey #EK edit
-if(survey[which(survey$SurveyID %in% surveyid),]$Vessel_code %ni% c("MB", "RB", "VE","TA", "FR", "CC", "GN", "TJ")){
+if(survey[which(survey$SurveyID %in% surveyid),]$vessel %ni% c("MB", "RB", "VE","TA", "FR", "CC", "GN", "TJ", "CE")){
   ##beep(10)
   stop(paste("Oops! The vessel code assigned to", surveyid, "in the SurveyID table isn't recognized:" , vessel,"Please make sure that vessel code in the SurveyID table is correct and run this code again.", sep = " "), call. = FALSE)
 } else {
-  vessel <- survey[which(survey$SurveyID %in% surveyid),]$Vessel_code
+  vessel <- survey[which(survey$SurveyID %in% surveyid),]$vessel
 }
 #     #Make sure the vessel is present in the HOE table
 if(vessel %ni% ship$Ship_code){
@@ -484,24 +493,24 @@ if(x %in% c("NO","no","No","N","n")){
   stop("Please correct the date-time data in the GPS Index table and re-run this code.", call. = FALSE)
 }
 
-#Store the Tasking for the survey
-if(survey[which(survey$SurveyID %in% surveyid),]$Tasking %ni% c("Dedicated","Opportunistic","Photo-ID","Dedicated/Opportunistic")){
-  beep(10)
-  stop(paste("Oops! The Tasking assigned to", surveyid, "in the SurveyID table isn't recognized. Please make sure that Tasking in the SurveyID table is either 'Dedicated', 'Opportunistic', 'Dedicated/Opportunistic', or 'Photo-ID', and run this code again.", sep = " "), call. = FALSE)
-} else {
-  task <- survey[which(survey$SurveyID %in% surveyid),]$Tasking
-}
+# #Store the Tasking for the survey
+# if(survey[which(survey$SurveyID %in% surveyid),]$Tasking %ni% c("Dedicated","Opportunistic","Photo-ID","Dedicated/Opportunistic")){
+#   beep(10)
+#   stop(paste("Oops! The Tasking assigned to", surveyid, "in the SurveyID table isn't recognized. Please make sure that Tasking in the SurveyID table is either 'Dedicated', 'Opportunistic', 'Dedicated/Opportunistic', or 'Photo-ID', and run this code again.", sep = " "), call. = FALSE)
+# } else {
+#   task <- survey[which(survey$SurveyID %in% surveyid),]$Tasking
+# }
 
 #Prompt to make sure that the Tasking for the survey is what is wanted
 #x <- readline(prompt = cat(paste("\nPlease confirm that", surveyid, "is a", task, "survey. Keep in mind that only dedicated or dedicated/opportunistic surveys will produce corrected animal positions.  [click here & type Yes or No & hit Enter]    \n\n"), sep = " "))
-x <- "y"
-if(x %in% c("NO","no","No","N","n")){
-  beep(10)
-  x <- readline(prompt = cat(paste("Okay. Please state what type of survey", surveyid, "is: (1) Dedicated, (2) Opportunistic, (3) Dedicated/Opportunistic, or (4) Photo-ID   [click here & type 1, 2, 3, or 4 & hit Enter]", sep = " ")))
-  t <- c("Dedicated","Opportunistic","Dedicated/Opportunistic","Photo-ID")
-  task <- t[as.numeric(x)]
-  survey[which(survey$SurveyID %in% surveyid),]$Tasking <- t[as.numeric(x)]
-}
+# x <- "y"
+# if(x %in% c("NO","no","No","N","n")){
+#   beep(10)
+#   x <- readline(prompt = cat(paste("Okay. Please state what type of survey", surveyid, "is: (1) Dedicated, (2) Opportunistic, (3) Dedicated/Opportunistic, or (4) Photo-ID   [click here & type 1, 2, 3, or 4 & hit Enter]", sep = " ")))
+#   t <- c("Dedicated","Opportunistic","Dedicated/Opportunistic","Photo-ID")
+#   task <- t[as.numeric(x)]
+#   survey[which(survey$SurveyID %in% surveyid),]$Tasking <- t[as.numeric(x)]
+# }
 #Make sure the survey year is in the DST table
 if(sum(DST$Year==year)!=1){
   beep(10)
@@ -510,15 +519,15 @@ if(sum(DST$Year==year)!=1){
 
 # TO DO set up survey transect id column in survey txt file
 #If there is a survey design, the design, based on the vessel identifier, will be loaded.
-if(vessel %in% c("RB","MB","VE","TA","FR","CC","GN","TJ")) {
-  # beep(10)
-  # x <- readline(prompt = cat(paste("How many transects were completed in survey", surveyid, "?   [click here & type number of transects & hit Enter]    \n\n"), sep = " "))
-  # transect.name.list.MASTER <- seq(1:x)
-  transect.name.list.MASTER <- unique(effort$Transect.ID[which(!is.na(effort$Transect.ID))])
-  transect.name.list.directional <- transect.name.list.MASTER
-} else {
-  stop("Looks like we don't have a design for the given survey. Please fix this and try again.", call.=FALSE)
-}
+# if(vessel %in% c("RB","MB","VE","TA","FR","CC","GN","TJ","CE")) {
+#   # beep(10)
+#   # x <- readline(prompt = cat(paste("How many transects were completed in survey", surveyid, "?   [click here & type number of transects & hit Enter]    \n\n"), sep = " "))
+#   # transect.name.list.MASTER <- seq(1:x)
+#   transect.name.list.MASTER <- unique(effort$Transect.ID[which(!is.na(effort$Transect.ID))])
+#   transect.name.list.directional <- transect.name.list.MASTER
+# } else {
+#   stop("Looks like we don't have a design for the given survey. Please fix this and try again.", call.=FALSE)
+# }
 
 #Make sure all data entries make sense
 #---------------------------------------
@@ -547,9 +556,9 @@ if(length(which(effort$Status!="ON" & !is.na(effort$Transect.ID)))!=0){
 }
 
 #Check to make sure all transect IDs make sense
-if(length(which(!is.na(effort$Transect.ID) & effort$Transect.ID %ni% transect.name.list.directional))!=0){
-  stop(paste("There are some effort records that have incorrect Transect IDs assigned:",toString(effort[which(!is.na(effort$Transect.ID) & effort$Transect.ID %ni% transect.name.list.directional),]$Time.PDT)),call.=FALSE)
-}
+# if(length(which(!is.na(effort$Transect.ID) & effort$Transect.ID %ni% transect.name.list.directional))!=0){
+#   stop(paste("There are some effort records that have incorrect Transect IDs assigned:",toString(effort[which(!is.na(effort$Transect.ID) & effort$Transect.ID %ni% transect.name.list.directional),]$Time.PDT)),call.=FALSE)
+# }
 
 if(sum(effort$Action %ni% c("Changing effort status","Observer rotation","Transect ID change","Weather update"))!=0){
   ##beep(10)
@@ -563,8 +572,9 @@ if(sum(effort$Action %ni% c("Changing effort status","Observer rotation","Transe
 if(length(which(effort$Platform == "Bridge"))!=0){
   effort[which(effort$Platform=="Bridge"),]$Platform <- "Br"
 }
-if(length(which(effort$Platform %in% c("MBBow", "Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_ManyberriesBow (Manyberries)", "Fujinon_ManyberriesBow")))!=0){
-  effort[which(effort$Platform %in% c("MBBow", "Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_ManyberriesBow (Manyberries)", "Fujinon_ManyberriesBow")),]$Platform <- "Bo"
+# Added CeMoRe throughout! Feb 10, 2025 for Oct 2024 2 day survey
+if(length(which(effort$Platform %in% c("MBBow", "Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_ManyberriesBow (Manyberries)", "Fujinon_ManyberriesBow", "Fujinon_CEMOREBow(CEMORE)")))!=0){
+  effort[which(effort$Platform %in% c("MBBow", "Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_ManyberriesBow (Manyberries)", "Fujinon_ManyberriesBow", "Fujinon_CEMOREBow(CEMORE)")),]$Platform <- "Bo"
 }
 if(length(which(effort$Platform =="RBFly_sitting"))!=0){
   effort[which(effort$Platform =="RBFly_sitting"),]$Platform <- "RBFly_sit"
@@ -867,8 +877,8 @@ sightings$Method <- sightings$Reticle.Instr
 #unique(sightings$Method)
 sightings$Platform <- NA
 
-if(nrow(sightings[which(sightings$Method %in% c("Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_ManyberriesBow(Manyberries)", "Fujinon_ManyberriesBow")),])!=0){
-  sightings[which(sightings$Method %in% c("Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_ManyberriesBow(Manyberries)", "Fujinon_ManyberriesBow")),]$Platform <- "Bo"
+if(nrow(sightings[which(sightings$Method %in% c("Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_ManyberriesBow(Manyberries)", "Fujinon_ManyberriesBow", "Fujinon_CEMOREBow(CEMORE)")),])!=0){
+  sightings[which(sightings$Method %in% c("Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_ManyberriesBow(Manyberries)", "Fujinon_ManyberriesBow", "Fujinon_CEMOREBow(CEMORE)")),]$Platform <- "Bo"
 }
 
 if(nrow(sightings[which(sightings$Method %in% c("Fujinon_bridge", "Fujinon_MBBridge")),])!=0){
@@ -906,8 +916,8 @@ if(sum(!is.na(sightings$Distance))!=0){
 # unique(sightings$Platform)
 
 #Adjust Method entries so they will work with our pre-written functions ('Bi', 'BE', 'NE'):
-if(sum(sightings$Method %in% c("Fujinon_bridge", "Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_ManyberriesBow(Manyberries)", "Fujinon_ManyberriesBow", "Fujinon_MBBridge", "Fujinon_RBbridge", "Fujinon_RBFly","Fujinon_VecBridge","Fujinon_TanuMonkey","Fujinon_TanuBridge", "Fujinon_FranklinMI","Fujinon_CharleyC","Fujinon_CharleyCBow(CharleyC)","Fujinon_GreatNorthern","Fujinon_GreatNorthernBow", "Fujinon_TitanJunior"))!=0){
-  sightings[which(sightings$Method %in% c("Fujinon_bridge","Fujinon_MBbow", "Fujinon_ManyberriesBow(Manyberries)", "Fujinon_ManyberriesBow", "Fujinon_MBBow", "Fujinon_MBBridge", "Fujinon_RBbridge", "Fujinon_RBFly", "Fujinon_VecBridge","Fujinon_TanuMonkey","Fujinon_TanuBridge", "Fujinon_FranklinMI","Fujinon_CharleyC","Fujinon_CharleyCBow(CharleyC)", "Fujinon_GreatNorthern","Fujinon_GreatNorthernBow", "Fujinon_TitanJunior")),]$Method <- "Bi"
+if(sum(sightings$Method %in% c("Fujinon_bridge", "Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_ManyberriesBow(Manyberries)", "Fujinon_ManyberriesBow", "Fujinon_MBBridge", "Fujinon_RBbridge", "Fujinon_RBFly","Fujinon_VecBridge","Fujinon_TanuMonkey","Fujinon_TanuBridge", "Fujinon_FranklinMI","Fujinon_CharleyC","Fujinon_CharleyCBow(CharleyC)","Fujinon_GreatNorthern","Fujinon_GreatNorthernBow", "Fujinon_TitanJunior","Fujinon_CEMOREBow(CEMORE)"))!=0){
+  sightings[which(sightings$Method %in% c("Fujinon_bridge","Fujinon_MBbow", "Fujinon_ManyberriesBow(Manyberries)", "Fujinon_ManyberriesBow", "Fujinon_MBBow", "Fujinon_MBBridge", "Fujinon_RBbridge", "Fujinon_RBFly", "Fujinon_VecBridge","Fujinon_TanuMonkey","Fujinon_TanuBridge", "Fujinon_FranklinMI","Fujinon_CharleyC","Fujinon_CharleyCBow(CharleyC)", "Fujinon_GreatNorthern","Fujinon_GreatNorthernBow", "Fujinon_TitanJunior","Fujinon_CEMOREBow(CEMORE)")),]$Method <- "Bi"
 }
 
 
@@ -1279,16 +1289,16 @@ cat("\n\nMaking sure trackline doesn't intercept land (this may take several min
 
 # load land shapefile
 #-------- EK edit (for diff shapefile, and using sf instead of sp---------------
-if(!exists("bc_coast")){
+# if(!exists("bc_coast")){
   # bc_coast <- readOGR("C:\\Users\\keppele\\Documents\\ArcGIS\\basemaps\\CoastLand.shp", verbose = FALSE) #Load in CHS coastline shapefile (in WGS84)
   # bc_coast <- sf::st_read(dsn="C:\\Users\\keppele\\Documents\\ArcGIS\\basemaps\\CoastLand.shp") %>%
   # st_as_sf() %>%
   #   st_transform(crs = 4326) #Load in CHS coastline shapefile (in WGS84)
   # bc_coast <- st_transform(bc_coast, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0")
   # EK edit: change to using sf package
-  bc_coast <- sf::st_read(dsn="C:\\Users\\keppele\\Documents\\ArcGIS\\basemaps\\Coastland") %>%
+bc_coast <- read_sf("C:\\Users\\keppele\\Documents\\ArcGIS\\basemaps\\Coastland\\CoastLand.shp") %>%
     st_transform(crs = 3005) %>% dplyr::select(geometry)
-}
+# }
 cat("\n - Land shapefile loaded")
 #Make trackpoints
 # BP <- SpatialPointsDataFrame(cbind(effort$Longitude,effort$Latitude), data=effort, proj4string=CRS("+proj=longlat"))
@@ -1355,7 +1365,7 @@ rownames(ONeffort) <- c(1:nrow(ONeffort))
 #Filter effort table to fields of interest only for exporting table # EK edit - remove stbd/port beaufort; GpsTime.PDT changed to PST temporarily - need to address this
 #--------------------------------------------------------------------
 #I haven't run fill on instrument, platform, etc. IF run into issues will have to address this.
-if(survey$Vessel_code == "FR"){
+if(survey$vessel == "FR"){
   Effort.Final<- ONeffort[,c("Vessel","GPSIndex","GpsTime.UTC","GpsTime","Latitude","Longitude","Speed","Heading","Status","Transect.ID","Final.Transect.ID","ONSEQ_ID","Platform","Franklin.Hut","Port.Observer","Starboard.Observer","Effort_Instrument","DataRecorder","PORT.Visibility","Beaufort","STBD.Visibility","Swell","Glare","Left.Glare.Limit","Right.Glare.Limit","Cloud.Cover","Precipitation")]
   names(Effort.Final)<-c("Vessel","GPSIndex","GpsT.UTC","GpsT","Latitude","Longitude","Speed","Heading","Status","Raw.T.ID","Final.T.ID","ONSEQ_ID","Platform","FR.Hut","Port.Obs", "Stbd.Obs","E_Instr","Data","Port.Vis","Bf","Stbd.Vis","Swell","Glare","L.G.Limit","R.G.Limit","CloudCover","Precip") # EK edit - combine bf and remove windspeed
 }else{

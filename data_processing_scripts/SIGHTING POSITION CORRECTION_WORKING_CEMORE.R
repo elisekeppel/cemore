@@ -270,10 +270,10 @@ cat("\n\nCalculating true horizon (this may take several minutes)...")
 
 #Import coast shapefile:
 # bc_coast = readOGR(paste(getwd(),u,"Required shapefiles/CHS/CHS_WGS_84.shp", sep = ""), verbose = FALSE) #Load in CHS coastline shapefile (in WGS84)
-if(!exists("bc_coast")){
-  bc_coast <- readOGR("C:\\Users\\keppele\\Documents\\ArcGIS\\basemaps\\CoastLand.shp")
-  bc_coast <- spTransform(bc_coast, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0")
-}
+# if(!exists("bc_coast")){
+
+bc_coast <- read_sf("C:\\Users\\keppele\\Documents\\ArcGIS\\basemaps\\Coastland\\CoastLand.shp") %>%
+  st_transform(crs = 3005) %>% dplyr::select(geometry)# }
 
 # bc_coast <- sf::st_transform(bc_coast, crs = 4326)
 cat("\n - Land shapefile loaded")
@@ -285,12 +285,20 @@ bino.begin$id <- as.character(bino.begin$id)
 bino.end$id <- as.character(bino.end$id)
 
 #Make initial points spatial objects
+# xy <- bino.begin[2:3]
+# initPos <- SpatialPointsDataFrame(coords=xy, data=bino.begin, proj4string=CRS("+proj=longlat"))
+# #initPos <- st_as_sf()
+# #initPos <- spTransform(initPos, CRSobj = proj4string(bc_coast))
+# initPos <- spTransform(initPos, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0")
+# cat("\n - Ship's position converted to spatial points")
+
+# EK edit - use sf instead of sp
 xy <- bino.begin[2:3]
-initPos <- SpatialPointsDataFrame(coords=xy, data=bino.begin, proj4string=CRS("+proj=longlat"))
-#initPos <- st_as_sf()
-#initPos <- spTransform(initPos, CRSobj = proj4string(bc_coast))
-initPos <- spTransform(initPos, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0")
+initPos <- st_as_sf(xy, coords = c("x","y"),crs=4326) %>%
+  st_transform(BP, crs=3005)
 cat("\n - Ship's position converted to spatial points")
+
+
 
 #Convert lines into spatial line data frame
 #Create a list of line coordinates
