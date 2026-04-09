@@ -2,7 +2,7 @@
 % Please edit documentation in R/functions.R
 \name{tidy_transects}
 \alias{tidy_transects}
-\title{Tidy transects
+\title{Tidy transects # note: plotKML doesn't work for newer R versions, so this doesn't run anymore
 Read in gpx file of planned survey transects (as either route or track) and convert to sf LINESTRING object}
 \usage{
 tidy_transects(
@@ -16,7 +16,7 @@ tidy_transects(
 \item{route}{true/false whether the object is a route (= linestring object)}
 }
 \description{
-Tidy transects
+Tidy transects # note: plotKML doesn't work for newer R versions, so this doesn't run anymore
 Read in gpx file of planned survey transects (as either route or track) and convert to sf LINESTRING object
 }
 \examples{

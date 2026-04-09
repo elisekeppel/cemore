@@ -271,12 +271,12 @@ cat("\n\nCalculating true horizon (this may take several minutes)...")
 #Import coast shapefile:
 # bc_coast = readOGR(paste(getwd(),u,"Required shapefiles/CHS/CHS_WGS_84.shp", sep = ""), verbose = FALSE) #Load in CHS coastline shapefile (in WGS84)
 # if(!exists("bc_coast")){
+#   bc_coast <- readOGR("C:\\Users\\keppele\\Documents\\ArcGIS\\basemaps\\CoastLand.shp")
+#   bc_coast <- spTransform(bc_coast, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0")
+# }
 
-bc_coast <- read_sf("C:\\Users\\keppele\\Documents\\ArcGIS\\basemaps\\Coastland\\CoastLand.shp") %>%
-  st_transform(crs = 3005) %>% dplyr::select(geometry)# }
-
-# bc_coast <- sf::st_transform(bc_coast, crs = 4326)
-cat("\n - Land shapefile loaded")
+# bc_coast <- bc_coast$geometry
+# cat("\n - Land shapefile loaded")
 
 #Get start and end points for reticle sightings
 bino.begin <- data.frame(id = data[which(!is.na(data$TOY)),]$key, x = data[which(!is.na(data$TOY)),]$longitude, y = data[which(!is.na(data$TOY)),]$latitude)
@@ -284,45 +284,51 @@ bino.end <- data.frame(id = data[which(!is.na(data$TOY)),]$key, x = data[which(!
 bino.begin$id <- as.character(bino.begin$id)
 bino.end$id <- as.character(bino.end$id)
 
+# EK edit - use sf instead of sp (Feb 10, 2025)
 #Make initial points spatial objects
 # xy <- bino.begin[2:3]
 # initPos <- SpatialPointsDataFrame(coords=xy, data=bino.begin, proj4string=CRS("+proj=longlat"))
 # #initPos <- st_as_sf()
 # #initPos <- spTransform(initPos, CRSobj = proj4string(bc_coast))
 # initPos <- spTransform(initPos, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0")
-# cat("\n - Ship's position converted to spatial points")
-
-# EK edit - use sf instead of sp
-xy <- bino.begin[2:3]
-initPos <- st_as_sf(xy, coords = c("x","y"),crs=4326) %>%
-  st_transform(BP, crs=3005)
 cat("\n - Ship's position converted to spatial points")
 
+# EK edit - use sf instead of sp (Feb 10, 2025)
+# xy <- bino.begin[2:3]
+initPos <- st_as_sf(bino.begin, coords = c("x","y"),crs=4326,agr = "constant")  %>% st_transform(3156)
 
+# EK edit - use sf instead of sp (Feb 10, 2025)
+# #Convert lines into spatial line data frame
+# #Create a list of line coordinates
+# l <- vector("list", nrow(bino.begin))
+# for (i in seq_along(l)) {
+#   l[[i]] <- Lines(list(Line(rbind(bino.end[i,2:3], bino.begin[i,2:3]))), ID=bino.begin[i,1])
+# }
+#
+# #Convert to spatial lines
+# spl <- SpatialLines(l, proj4string = CRS("+proj=longlat"))
+# #Alter bino.begin so row names match list names in spatial line object
+# row.names(bino.begin) <- bino.begin$id
+# #Create spatial line data frame
+# spl <- SpatialLinesDataFrame(spl, data = bino.begin)
+# #Transform to WGS84 UTM 9N
+# #spl <- spTransform(spl, CRSobj = proj4string(bc_coast))
+# spl <- spTransform(spl, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0")
 
-#Convert lines into spatial line data frame
-#Create a list of line coordinates
-l <- vector("list", nrow(bino.begin))
-for (i in seq_along(l)) {
-  l[[i]] <- Lines(list(Line(rbind(bino.end[i,2:3], bino.begin[i,2:3]))), ID=bino.begin[i,1])
-}
-#Convert to spatial lines
-spl <- SpatialLines(l, proj4string = CRS("+proj=longlat"))
-#Alter bino.begin so row names match list names in spatial line object
-row.names(bino.begin) <- bino.begin$id
-#Create spatial line data frame
-spl <- SpatialLinesDataFrame(spl, data = bino.begin)
-#Transform to WGS84 UTM 9N
-#spl <- spTransform(spl, CRSobj = proj4string(bc_coast))
-spl <- spTransform(spl, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0")
+all_sgt_lines <- get_sight_lines(bino.begin, bino.end) %>% st_transform(3156)
 
 #Clip BC polygon to spatial extent of sight lines
 # bc_clip <- gClip(bc_coast,spl) - not working EK
-b_poly <- as(raster::extent(spl), "SpatialPolygons")
-proj4string(b_poly) <- "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0"
+# b_poly <- as(raster::extent(spl), "SpatialPolygons") # EK edit
+# proj4string(b_poly) <- "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0"
+ex <- raster::extent(all_sgt_lines)
+b_poly <- st_crop(bc_coast, ex) %>% st_sf(agr = "constant")
+
+# ggplot(l) +geom_sf(data=b_poly) + geom_sf(data = l, colour="red") +geom_sf(data=initPos, colour = "blue")
 
 cat("\n - Coastline clipped by extent of sighting lines")
 
+# EK edit - use sf instead of sp (Feb 11, 2025)
 #Clipping by bounding box
 #bb <- matrix(c(650000,5618000,655000,5621000),nrow=2)
 #rownames(bb) <- c("lon","lat")
@@ -373,39 +379,71 @@ cat("\n - Coastline clipped by extent of sighting lines")
 #     #Add intercept points to plot
 #   #points(lpts$Edge_x_utm, lpts$Edge_y_utm, col="green", pch=16, cex=0.9)
 # }
+ints.ind <- st_intersects(all_sgt_lines, b_poly) %>% as.data.frame() # which lines intersect land
 
-#Correct horizon data
-#--------------------------
-cat("\n\nCorrecting horizon data...")
-#All lines that intersect coastline should have Ret_line=="LA", those that don't intersect anything should have Ret_line=="HO", Sightings without reticles (i.e. with Distance) should have Ret_line==NA
-if(exists("ints")){
-  if(length(which(data$key %in% ints))!=0){
-    data[which(data$key %in% ints),]$Ret_line <- "LA"
-  }
-  if(length(which(data$key %ni% ints & !is.na(data$horizon.dist.nmi)))!=0){
-    data[which(data$key %ni% ints & !is.na(data$horizon.dist.nmi)),]$Ret_line <- "HO"
-  }
-} else {
-  data[which(!is.na(data$horizon.dist.nmi)),]$Ret_line <- "HO"
-}
+#--------------------------------------------------
+# if(ints.ind %>% length() >0){ #only split if there is at least one intersection between the sight lines and the coast polygon
+# EK edit: change length() to nrow() Aug 15, 2025
+if(ints.ind %>% nrow() >0){ #only split if there is at least one intersection between the sight lines and the coast polygon
 
-# EK edit - add if clause
-if(nrow(data[which(is.na(data$Reticle) | is.na(data$BEARING)),]!=0)){
-  data[which(is.na(data$Reticle) | is.na(data$BEARING)),]$Ret_line <- NA
-}
-#Override horizon distance for records with Ret_line=="LA" with distance to shore (in nmi)
-if(exists("ints")){
-  for(i in 1:nrow(lpts)){
-    data[which(data$key==lpts[i,]$id),]$horizon.dist.nmi <- lpts[i,]$dist
-  }
-}
+  # Get ID number of each line that intersects the polygon
+  #--------------------------------------------------------
+  ints.ind <- ints.ind[,1] %>% unique() # index for sgt lines intersecting land
+  ints <- all_sgt_lines[c(ints.ind),]$id
+  int_sgt_lines <- all_sgt_lines[c(ints.ind),]
 
-#Assign zero land horizon (ZR)
-if(length(which(data$Ret_line=="LA" & data$Reticle==0))!=0){
-  data[which(data$Ret_line=="LA" & data$Reticle==0),]$ZR <- 1
-  data[which(data$Ret_line=="LA" & data$Reticle==0),]$Reticle <- 0.1
+  # Extract edge points from lines
+  #--------------------------------------------------------
+  landpts <- map(ints, function(x){
+    z <-  int_sgt_lines[which(int_sgt_lines$id == x),] %>% st_intersection(b_poly) %>%
+      st_sf(agr = "constant") %>%st_cast("MULTIPOINT") %>% st_sf(agr = "constant") %>%
+      st_cast("POINT") %>%
+      dplyr::mutate(dist = st_distance(., initPos[which(initPos$id == x),])) %>%
+      slice(which.min(dist))
+    z
+  })
+  lpts <- bind_rows(landpts)
+
+  ggplot() +geom_sf(data=b_poly) +
+    geom_sf(data = all_sgt_lines, colour="blue") +
+    geom_sf(data = int_sgt_lines, colour="red") +
+    geom_sf(data=initPos, colour = "purple") +
+    geom_sf(data=lpts, colour="green")
+
 }
-cat("DONE")
+  cat("\n - Sighting lines split by BC coast shapefile")
+  #Correct horizon data
+  #--------------------------
+  cat("\n\nCorrecting horizon data...")
+  #All lines that intersect coastline should have Ret_line=="LA", those that don't intersect anything should have Ret_line=="HO", Sightings without reticles (i.e. with Distance) should have Ret_line==NA
+  if(exists("ints")){
+    if(length(which(data$key %in% ints))!=0){
+      data[which(data$key %in% ints),]$Ret_line <- "LA"
+    }
+    if(length(which(data$key %ni% ints & !is.na(data$horizon.dist.nmi)))!=0){
+      data[which(data$key %ni% ints & !is.na(data$horizon.dist.nmi)),]$Ret_line <- "HO"
+    }
+  } else {
+    data[which(!is.na(data$horizon.dist.nmi)),]$Ret_line <- "HO"
+  }
+
+  # EK edit - add if clause
+  if(nrow(data[which(is.na(data$Reticle) | is.na(data$BEARING)),]!=0)){
+    data[which(is.na(data$Reticle) | is.na(data$BEARING)),]$Ret_line <- NA
+  }
+  #Override horizon distance for records with Ret_line=="LA" with distance to shore (in nmi)
+  if(exists("ints")){
+    for(i in 1:nrow(lpts)){
+      data[which(data$key==lpts[i,]$id),]$horizon.dist.nmi <- lpts[i,]$dist
+    }
+  }
+
+  #Assign zero land horizon (ZR)
+  if(length(which(data$Ret_line=="LA" & data$Reticle==0))!=0){
+    data[which(data$Ret_line=="LA" & data$Reticle==0),]$ZR <- 1
+    data[which(data$Ret_line=="LA" & data$Reticle==0),]$Reticle <- 0.1
+  }
+  cat("DONE")
 
 #Assign Fair conditions (FC) data code using horizon certainty rather then visibility
 cat("\n\nChecking for fair conditions...")
@@ -488,10 +526,13 @@ cat("\n\nChecking that corrected sightings don't fall on land...")
 #Unrealistic estimated distance (UED)
 #-------------------------------------
 data1 <- data[which(!is.na(data$final.lon)),] #Filter data to corrected positions only
-AP <- SpatialPointsDataFrame(cbind(data1$final.lon,data1$final.lat), data=data1, proj4string=CRS("+proj=longlat"))
+# EK edit - use sf instead of sp (Feb 11, 2025)
+# AP <- SpatialPointsDataFrame(cbind(data1$final.lon,data1$final.lat), data=data1, proj4string=CRS("+proj=longlat"))
 # AP <- spTransform(AP, CRSobj = proj4string(bc))
 # AP <- spTransform(AP, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0") # EK edit
-AP <- st_as_sf(AP) %>% st_transform(crs = st_crs(bc_coast)) # EK edit to use sf
+cat("test")
+AP <- st_as_sf(data1, coords = c("final.lon", "final.lat"), crs =4326) %>% st_transform(crs = st_crs(bc_coast))
+cat("test2")
 
 #Find any points that fall on land
 #plot(bc, axes=TRUE)
@@ -575,10 +616,12 @@ data$diff <- NULL
 #====================================
 #Check whether any final positions fall on land
 cat("\n\nChecking that final sightings positions don't fall on land...")
-AP <- SpatialPointsDataFrame(cbind(data$final.lon,data$final.lat), data=data, proj4string=CRS("+proj=longlat")) %>%
-  st_as_sf() # EK edit : change to sf
+# EK edit - use sf instead of sp (Feb 11, 2025)
+# AP <- SpatialPointsDataFrame(cbind(data$final.lon,data$final.lat), data=data, proj4string=CRS("+proj=longlat")) %>%
+  # st_as_sf() # EK edit : change to sf
 # AP <- spTransform(AP, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0")
-AP <- st_transform(AP, crs = st_crs(bc_coast)) # EK edit : change to sf
+AP <- st_as_sf(data, coords = c("final.lon", "final.lat"),crs = 4326, remove=F) %>%
+  st_transform(crs=st_crs(bc_coast))
 
 LAND <- AP[bc_coast,]
 nrow(LAND) #number of corrected positions on land. There should be nothing on land at this point

@@ -29,16 +29,18 @@ qq.gam2 <- function(mod){
 #####################################################
 # **Plotting uncertainty**
 #####################################################
-pred_ab_spt <- function(mod, newdata, pred_by, res="sum"){ # res can = "sum" or "data"
+pred_ab_spt <- function(mod, newdata,
+                        # pred_by = NULL,
+                        res="sum"){ # res can = "sum" or "data"
   newdata$pred <- predict(object = mod, newdata = newdata, off.set = newdata$off.set)
 
-  if(!is.null(pred_by)){
+  # if(!is.null(pred_by)){
     widedata <- newdata %>%
-      group_by(grid.id, x, y, off.set) %>%
+      group_by(grid.id, x, y, std.x, std.y, off.set) %>%
       summarise(pred = mean(pred))
-  }else{
-    widedata <- newdata
-  }
+  # }else{
+    # widedata <- newdata
+  # }
 
   # pivot_wider(id_cols = c(grid.id, x, y), names_from = monthYear, values_from = preds) %>%
   #   mutate(
@@ -48,10 +50,11 @@ pred_ab_spt <- function(mod, newdata, pred_by, res="sum"){ # res can = "sum" or 
   #     mean.2022 = rowMeans(across(c(names(data)[which(names(data) %like% "2022")]))),
   #     mean.2023 = rowMeans(across(c(names(data)[which(names(data) %like% "2023")]))),
   #     pred   = rowMeans(across(my)))
-
-  if(res == "sum"){
     model <- deparse(substitute(mod))
-    res <- data.frame(model, pred = round(sum(widedata$pred)))
+    pred  <- round(sum(widedata$pred))
+    cat(paste(model, "abund est =", pred))
+  if(res == "sum"){
+    res <- data.frame(model, pred)
   }else{
     res <- widedata
   }
@@ -75,7 +78,8 @@ plot_pred <- function(mod,
                       # study_area = F,
                       # buffer = T,
                       coast = coast_lr,
-                      points = T){
+                      points = T,
+                      obs = NULL){
   #########################################
   # Prep yearly data
   #########################################
@@ -114,9 +118,9 @@ plot_pred <- function(mod,
   if(!is.null(var)) p <- p + geom_sf(aes(fill = .data[[cv]]))
   # if(study_area) p <- p + geom_sf(data = study.area.can, fill = NA)
   # if(buffer)
-  p <- p + geom_sf(data = study.area.can2.crop, fill = NA) +
+  p <- p + geom_sf(data = study.area, fill = NA) +
     # if(points)
-    p + geom_sf(data = obs.sf, aes(size = size), shape = 1, alpha = 0.9)
+    p + geom_sf(data = obs, aes(size = size), shape = 1, alpha = 0.9)
 
   #########################################
   # Plot yearly
@@ -154,38 +158,79 @@ plot_pred <- function(mod,
   p
 }
 
-plot_cv <- function(mod, predgrid.sf, transf = "log10", study_area = F, buffer = T, effort = F, points = T, coast = coast_lr){
-  mod.name = deparse(substitute(mod))
-  predgrid.sf$height <- predgrid.sf$width <- 2
-  pred_split <- split(predgrid.sf, 1:nrow(predgrid.sf))
+# plot_cv <- function(mod, predgrid.sf, transf = "log10", study_area = F, buffer = T, effort = F, points = T, coast = coast_lr){
+#   mod.name = deparse(substitute(mod))
+#   predgrid.sf$height <- predgrid.sf$width <- 2
+#   pred_split <- split(predgrid.sf, 1:nrow(predgrid.sf))
+#
+#   var_split <- dsm_var_prop.x(mod, pred_split,
+#                               off.set = predgrid$off.set)
+#   predgrid.sf$cv <- sqrt(var_split$pred.var)/unlist(var_split$pred)
+#
+#   big.CV <- dsm_var_prop.x(mod, predgrid, off.set = predgrid$off.set)
+#   big.CV <- summary(big.CV)$cv %>% round(digits = 3)
+#
+#   p <- ggplot(predgrid.sf) +
+#     geom_sf(data = coast, fill = "grey") +
+#     geom_sf(aes(fill = cv, colour = cv)) +
+#     scale_fill_viridis_c(option = "E", trans = transf, name = "CV",
+#                          aesthetics = c("colour", "fill")) +
+#     ggtitle(mod.name, subtitle = big.CV)
+#
+#   if(study_area)   p <- p + geom_sf(data = study.area.can, fill = "transparent")
+#   if(buffer)       p <- p + geom_sf(data = study.area, fill = "transparent")
+#   if(effort)       p <- p + geom_sf(data = seg.sf, alpha = 0.3)
+#   if(points)       p <- p + geom_sf(data = subset(obs.sf, size > 0), aes(size = size),
+#                                     shape = 1, alpha = 0.8, show.legend = F)
+#
+#   p <- p + guides(colour = guide_colourbar(order = 1),
+#                   fill = guide_colourbar(order = 1)) +
+#     theme(legend.text = element_blank(), axis.title = element_blank(),
+#           legend.position = "right", legend.key.width = unit(0.005, "npc")) +
+#     gg.opts + ggtitle(paste("Overall CV : ", as.character(big.CV)), subtitle = mod.name)
+#   p
+# }
 
-  var_split <- dsm_var_prop.x(mod, pred_split,
-                              off.set = predgrid$off.set)
-  predgrid.sf$cv <- sqrt(var_split$pred.var)/unlist(var_split$pred)
 
-  big.CV <- dsm_var_prop.x(mod, predgrid, off.set = predgrid$off.set)
-  big.CV <- summary(big.CV)$cv %>% round(digits = 3)
+#-------------------------------------------------------------------------------
+# TO PLOT CV TW1
+#-------------------------------------------------------------------------------
+get_cv_plot_data <- function(mod, grid, pg_var_split){
+  # pg_var_split <- split(pg.my, 1:nrow(pg.my))
 
-  p <- ggplot(predgrid.sf) +
-    geom_sf(data = coast, fill = "grey") +
-    geom_sf(aes(fill = cv, colour = cv)) +
-    scale_fill_viridis_c(option = "E", trans = transf, name = "CV",
-                         aesthetics = c("colour", "fill")) +
-    ggtitle(mod.name, subtitle = big.CV)
+  pg.new <- grid
+  var_split <- pg_var_split
+  var_split <- dsm_var_prop.x(mod, var_split, off.set=pg.new$off.set)
 
-  if(study_area)   p <- p + geom_sf(data = study.area.can, fill = "transparent")
-  if(buffer)       p <- p + geom_sf(data = study.area.can2.crop, fill = "transparent")
-  if(effort)       p <- p + geom_sf(data = seg.sf, alpha = 0.3)
-  if(points)       p <- p + geom_sf(data = subset(obs.sf, size > 0), aes(size = size),
-                                    shape = 1, alpha = 0.8, show.legend = F)
+  pg.new$pred     <- var_split$pred %>% unlist()
+  pg.new$pred.var <- var_split$pred.var
 
-  p <- p + guides(colour = guide_colourbar(order = 1),
-                  fill = guide_colourbar(order = 1)) +
-    theme(legend.text = element_blank(), axis.title = element_blank(),
-          legend.position = "right", legend.key.width = unit(0.005, "npc")) +
-    gg.opts + ggtitle(paste("Overall CV : ", as.character(big.CV)), subtitle = mod.name)
-  p
+  pg.new %<>% group_by(grid.id, off.set) %>% summarise(
+    mean.cell.pred = mean(pred), mean.cell.var = mean(pred.var))
+
+  plot.cv <- pg.new %>% mutate(cv = sqrt(mean.cell.var)/mean.cell.pred)
+  plot.cv <- predgrid.sf[,c("std.x", "std.y", "grid.id", "geometry")] %>% left_join(plot.cv)
+  plot.cv
 }
+
+# cvdata.fall.tw1 <- get_cv_plot_data(mod, pg.my, pg.my_var_split)
+#-------------------------------------------------------------------------------
+# BIG CV TW1
+#-------------------------------------------------------------------------------
+get_big_cv <- function(mod, grid, pg_var_split){ # mod  <- hw_tw_lsst20
+  # grid <- predgrid.can.my.sf
+  pg.new <- grid
+  var_split <- pg_var_split
+  var_split.my <- dsm_var_prop.x(mod, var_split, off.set=pg.new$off.set)
+
+  mean.pred.var.my <- var_split.my$pred.var %>% mean() %>% sqrt()
+  mean.pred.my <- var_split.my$pred %>% unlist() %>% mean()
+
+  CV <- (mean.pred.var.my/mean.pred.my) %>% signif(digits = 3) %>% print()
+  CV
+}
+
+# CV.fall.tw1 <- get_big_cv(hw_tw_lsst20, pg.my, pg.my_var_split)
 
 ####################################################
 # **Plotting uncertainty**
@@ -247,7 +292,7 @@ plot_cov <- function(effort = NULL, sightings = NULL,
       legend.key.height = unit(0.05, "npc"),
       legend.key.width = unit(0.0075, "npc"))
 
-  if(study.area)          p <- p + geom_sf(data = study.area.can2.crop, colour = "grey10", fill = NA, alpha = 0.8)
+  if(study.area)          p <- p + geom_sf(data = study.area, colour = "grey10", fill = NA, alpha = 0.8)
   if(!is.null(effort))    p <- p + geom_sf(data = effort, colour = "black", alpha = 0.3, linewidth = 0.2)
   if(!is.null(sightings)) p <- p + geom_sf(data = subset(sightings, size>0), aes(size = size),
                                            alpha = 0.4, linewidth = 0.2, shape = 1, show.legend = FALSE)

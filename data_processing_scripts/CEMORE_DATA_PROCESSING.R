@@ -70,8 +70,12 @@ if(exists("sightings")){
 
 # tryCatch(survey <- read.table(paste(getwd(),u,"Survey data",u,surveyid,"_dataSurveyID.txt", sep=""), sep=",", header=TRUE, stringsAsFactors = FALSE, strip.white = TRUE, na.strings = c("NA","na","n/a","N/A","")), error = function(e) {paste("Oops! Are you sure '",surveyid,"_dataSurveyID.txt' is saved in the 'Survey data' folder?",sep="")}, warning = function(w) {paste("Oops! Are you sure '",surveyid,"_dataSurveyID.txt' is saved in the 'Survey data' folder?",sep="")})
 # tryCatch(survey <- read.table(paste(getwd(),u,data_path,u,surveyid,"_dataSurveyID.txt", sep=""), header=TRUE, stringsAsFactors = FALSE, strip.white = TRUE, na.strings = c("NA","na","n/a","N/A","")), error = function(e) {paste("Oops! Are you sure '",surveyid,"_dataSurveyID.txt' is saved in the 'Survey data' folder?",sep="")}, warning = function(w) {paste("Oops! Are you sure '",surveyid,"_dataSurveyID.txt' is saved in the 'Survey data' folder?",sep="")})
-tryCatch(survey <- readRDS("C:/users/keppele/documents/cemore/analysis/cemore_analysis/survey_data/surveys.rds"))
-survey <- survey[which(survey$SurveyID == surveyid),]
+if(data.source %in% c("cemore")){
+  tryCatch(survey <- readRDS("C:/users/keppele/documents/cemore/analysis/cemore_analysis/survey_data/surveys.rds"))
+  survey <- survey[which(survey$SurveyID == surveyid),]}
+if(data.source %in% c("CRP")){
+  tryCatch(survey <- read.table(paste(getwd(),u,data_path,u,"crp_", year, tolower(month_abb),"_dataSurveyID.txt", sep=""), header=TRUE, stringsAsFactors = FALSE, strip.white = TRUE, na.strings = c("NA","na","n/a","N/A","")), error = function(e) {paste("Oops! Are you sure '",surveyid,"_dataSurveyID.txt' is saved in the 'Survey data' folder?",sep="")}, warning = function(w) {paste("Oops! Are you sure '",surveyid,"_dataSurveyID.txt' is saved in the 'Survey data' folder?",sep="")})
+}
 
 if(exists("survey")){
   cat("Survey info file upload successful!\n\n")
@@ -98,7 +102,7 @@ if(exists("DST")){
 
 #Import GPS data
 cat("Importing GPS data... ")
-if(data.source == "cemore") track.path <- paste(getwd(), u,main.dir,u, "tracklines",u, "transects", u, "csv",u, year, "-", month,sep="")
+if(data.source %in% c("cemore", "CRP")) track.path <- paste(getwd(), u,main.dir,u, "tracklines",u, "transects", u, "csv",u, year, "-", month,sep="")
 if(data.source == "mmcp") track.path <- paste(getwd(), u,main.dir,u, "tracklines",u, "transects", u, "csv",u, year, "-", month,u,vessel,sep="")
 track.files <- list.files(track.path,include.dirs = FALSE,full.names = TRUE)
 track.list <- as.list(track.files)
@@ -122,7 +126,7 @@ for(i in 1:length(track.list)) { #upload all GPS tables
 
   rownames(data)<-1:length(data$Distance.From.Previous..m.)
   data <- dplyr::rename(data, Time.Created = grep("Time.Created..P", names(data), value = T))
-  data <- dplyr::rename(data, Time.Created = grep("Time.Created..UTC..1", names(data), value = T))
+  # data <- dplyr::rename(data, Time.Created = grep("Time.Created..UTC..1", names(data), value = T))
   dates <- sort(unique(as.Date(str_extract(data$Time.Created, "^.{10}"), format="%Y-%m-%d"))) # EK edit changed to PST when required
   d <- as.numeric(diff(dates))
   #Check to ensure that file name dates match the date/time stamps within the file (i.e. look for non-consecutive dates):
@@ -138,12 +142,21 @@ for(i in 1:length(track.list)) { #upload all GPS tables
 
 gps <- do.call("rbind",track.list) #append all GPS data together
 gps$Time.Created <- as.POSIXct(strptime(gps$Time.Created,format = "%Y-%m-%dT%H:%M:%S"),tz="America/Vancouver") #EK edit
-if(!is.null(gps$Time.Created..UTC.)){
-  gps$Time.Created..UTC. <- as.POSIXct(strptime(gps$Time.Created..UTC., format = "%Y-%m-%d %H:%M:%S"),tz="GMT") # Make sure GPS data is in GMT!
-}else{
-  gps$Time.Created..UTC. <- gps$Time.Created %>% with_tz("UTC")
+
+# Fix those timestamps that were directly at midnight
+if(sum(is.na(gps$Time.Created))>0){
+  ind <- which(is.na(gps$Time.Created))
+  gps <- do.call("rbind",track.list) # Re-append all GPS data together
+
+  gps[ind,]$Time.Created <- paste(gps[ind,]$Time.Created, "00:00:00", sep = "T")
+  gps[ind,]$Time.Created..UTC. <- paste(gps[ind,]$Time.Created..UTC., "00:00:00")
+
+  # reformat
+  gps$Time.Created <- as.POSIXct(strptime(gps$Time.Created,format = "%Y-%m-%dT%H:%M:%S"),tz="America/Vancouver") #EK edit
+  # gps[ind,]$Time.Created <- format(as.POSIXct(paste(gps[ind,]$Time.Created..UTC., "00:00:00")), "%Y-%m-%d %H:%M:%S")
+  # gps[ind,]$Time.Created..UTC. <- gps[ind,]$Time.Created
 }
-  # gps$Time.Created..PST. <- as.POSIXct(strptime(gps$Time.Created..PST.,format = "%Y-%m-%dT%H:%M:%S"),tz="America/Vancouver")
+# gps$Time.Created..PST. <- as.POSIXct(strptime(gps$Time.Created..PST.,format = "%Y-%m-%dT%H:%M:%S"),tz="America/Vancouver")
 
 #Remove redundant records
 gps <- gps[order(gps$Time.Created),]
@@ -185,6 +198,9 @@ cat("Checking dataframe column names...\n\n")
 
 #Effort fields depend on the vessel platform # EK edit
 if(is.null(effort$Franklin.Hut)) effort$Franklin.Hut <- NA
+if(vessel == "VE"){
+  if(is.null(effort$Locked.from.Editing)) effort$Locked.from.Editing <- NA
+  if(is.null(effort$QA.QC_Comments)) effort$QA.QC_Comments <- NA}
 nn <- c("time_index", "time_local","Action","Status","Platform","Franklin.Hut","PORT.Observer","STBD.Observer","Effort_Instrument","Data.Recorder","Beaufort", "PORT.Visibility","STBD.Visibility","Swell","Glare","Left.Glare.Limit","Right.Glare.Limit","Cloud.Cover","Precipitation","Comments", "Locked.from.Editing","QA.QC_Comments")
 if(length(which(nn %ni% colnames(effort)))!=0){
   beep(10)
@@ -199,6 +215,7 @@ if(length(which(nn %ni% colnames(sightings)))!=0){
 }
 
 # nn <- c("SurveyID","Tasking","vessel","VesselID","Analysis_Status","Analytical_Approach","Date_Start_GMT","Date_End_GMT","Total_Days","TotalONEFFAreakmsqd","TotalONEFFDistancekm","TotalONEFFTimehr","TotalOFFTimehr","TotalONCefforts","TotalONCTimehr","TotalONEFFsurveysightings","TotalONEFFanimalcount","Totalothersightings","Totalotheranimalcount","Date_Analysed")
+if(data.source %in% c("CRP")) survey %<>% rename(vessel = Vessel_code, field_days = Total_Days)
 nn <- c("SurveyID","vessel","Date_Start_GMT","Date_End_GMT","field_days")
 # ,"Tasking","VesselID","Analysis_Status","Analytical_Approach","TotalONEFFAreakmsqd","TotalONEFFDistancekm","TotalONEFFTimehr","TotalOFFTimehr","TotalONCefforts","TotalONCTimehr","TotalONEFFsurveysightings","TotalONEFFanimalcount","Totalothersightings","Totalotheranimalcount","Date_Analysed"
 if(length(which(nn %ni% colnames(survey)))!=0){
@@ -207,7 +224,8 @@ if(length(which(nn %ni% colnames(survey)))!=0){
 }
 
 nn <- c("Time.Created..UTC.","Time.Created","Latitude","Longitude","Altitude..m.","Speed.Over.Ground..kts.","Course.Over.Ground..T.","Distance.From.Previous..m.","Course.Over.Ground.from.Start..T.","Distance.From.Start..m.","Water.Temperature..C.","Water.Depth..m.")
-nn <- c("Time.Created..UTC.","Time.Created","Latitude","Longitude","Speed.Over.Ground..kts.","Course.Over.Ground..T.","Distance.From.Previous..m.")
+if(data.source == "CRP") nn <- c("Time.Created..UTC.","Time.Created","Latitude","Longitude","Speed.Over.Ground..kts.","Course.Over.Ground..T.","Distance.From.Previous..m.")
+if(vessel == "CE") nn <- c("Time.Created","Latitude","Longitude","Speed.Over.Ground..kts.","Course.Over.Ground..T.","Distance.From.Previous..m.")
 if(length(which(nn %ni% colnames(gps)))!=0){
   beep(10)
   stop(paste("Column name(s) in Gps Data are missing or misspelled. We are looking for:", toString(nn[which(nn %ni% colnames(gps))], sep = " ")), call. = FALSE)
@@ -261,8 +279,8 @@ if(length(unique(gps$Time.Created))!=nrow(gps)){
 }
 
 #Date-time variables
-gps$Time.Created <-try(gsub("T"," ", gps$Time.Created))
-gps$Time.Created <- as.POSIXct(strptime(gps$Time.Created,format = "%Y-%m-%d %H:%M:%S"),tz="America/Vancouver")
+# gps$Time.Created <-try(gsub("T"," ", gps$Time.Created))
+# gps$Time.Created <- as.POSIXct(strptime(gps$Time.Created,format = "%Y-%m-%d %H:%M:%S"),tz="America/Vancouver")
 
 if(sum(is.na(gps$Time.Created))!=0){
   beep(10)
@@ -273,6 +291,8 @@ if(sum(is.na(gps$Time.Created))!=0){
 #this will be the unique key for the GPS and Effort dataframes. The unique key for the Sighting table will be GPSIndex-SightingNo
 # fix any gaps from Mysti using data from badelf
 if(badelf) {be <- read.csv(file.path("survey_data/tracklines/transects/badelf", badelf_filename))
+be$Time.Created <- as.POSIXct(strptime(be$Time.Created,format = "%Y-%m-%d %H:%M:%S"), tz="America/Vancouver")
+be$Time.Created..UTC. <- as.POSIXct(strptime(be$Time.Created..UTC.,format = "%Y-%m-%d %H:%M:%S"), tz="GMT")
 # be %<>% transmute(Time.Created..UTC.=GpsTime.UTC, Time.Created=GpsTime,  Latitude, Longitude, Speed.Over.Ground..kts.=NA,Course.Over.Ground..T.=NA)
 gps <- rbind(gps,be)
 }
@@ -310,8 +330,17 @@ index <- which(names(effort) %in% cv)
 effort[,index]<-lapply(index, function(x) as.character(effort[,x]))
 
 #Date-time variables EK edit
-effort$time_index <- gsub("T"," ", effort$time_index)
-effort$time_index <- as.POSIXct(strptime(effort$time_index,format = "%Y-%m-%d %H:%M:%S"),tz="America/Vancouver")
+# effort$time_index <- gsub("T"," ", effort$time_index)
+# effort$time_index <- as.POSIXct(strptime(effort$time_index,format = "%Y-%m-%d %H:%M:%S"),tz="America/Vancouver")
+effort$time_index <- as.POSIXct(strptime(effort$time_index,format = "%Y-%m-%dT%H:%M:%S"),tz="America/Vancouver")
+
+# Fix those timestamps that were directly at midnight
+if(sum(is.na(effort$time_index))>0){
+  ind <- which(is.na(effort$time_index))
+  effort[ind,]$time_local <- paste(effort[ind,]$time_local, "00:00:00", sep="T")
+  effort[ind,]$time_index <- effort[ind,]$time_local
+}
+
 effort <- effort[order(effort$time_index),]
 rownames(effort) <- c(1:nrow(effort))
 
@@ -463,7 +492,7 @@ if(nrow(survey[which(survey$SurveyID %in% surveyid),])!=1){
   }
 }
 #Store the vessel code name for the survey #EK edit
-if(survey[which(survey$SurveyID %in% surveyid),]$vessel %ni% c("MB", "RB", "VE","TA", "FR", "CC", "GN", "TJ", "CE")){
+if(survey[which(survey$SurveyID %in% surveyid),]$vessel %ni% c("MB", "RB", "VE","TA", "FR", "CC", "GN", "TJ", "CE", "TU")){
   ##beep(10)
   stop(paste("Oops! The vessel code assigned to", surveyid, "in the SurveyID table isn't recognized:" , vessel,"Please make sure that vessel code in the SurveyID table is correct and run this code again.", sep = " "), call. = FALSE)
 } else {
@@ -560,7 +589,9 @@ if(length(which(effort$Status!="ON" & !is.na(effort$Transect.ID)))!=0){
 #   stop(paste("There are some effort records that have incorrect Transect IDs assigned:",toString(effort[which(!is.na(effort$Transect.ID) & effort$Transect.ID %ni% transect.name.list.directional),]$Time.PDT)),call.=FALSE)
 # }
 
-if(sum(effort$Action %ni% c("Changing effort status","Observer rotation","Transect ID change","Weather update"))!=0){
+if(sum(effort$Action %ni% c("Changing effort status","Observer rotation","Transect ID change","Weather update"#,
+                            # NA # temp addition for running processing code on Vector data 2025-dec-9
+))!=0){
   ##beep(10)
   stop(paste("Oops! There are Action entries in the Effort table that aren't recognized or missing (EVERY effort record must have an Action assigned): ", toString(unique(effort[which(effort$Action %ni% c("Changing effort status","Observer rotation","Transect ID change","Weather update")),]$Action)),".  Please correct these entries and run this code again. If any of these are valid Action entries, contact Eva about incorporating the new Action(s) into this automated process.",sep = " "), call. = FALSE)
 }
@@ -573,8 +604,8 @@ if(length(which(effort$Platform == "Bridge"))!=0){
   effort[which(effort$Platform=="Bridge"),]$Platform <- "Br"
 }
 # Added CeMoRe throughout! Feb 10, 2025 for Oct 2024 2 day survey
-if(length(which(effort$Platform %in% c("MBBow", "Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_ManyberriesBow (Manyberries)", "Fujinon_ManyberriesBow", "Fujinon_CEMOREBow(CEMORE)")))!=0){
-  effort[which(effort$Platform %in% c("MBBow", "Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_ManyberriesBow (Manyberries)", "Fujinon_ManyberriesBow", "Fujinon_CEMOREBow(CEMORE)")),]$Platform <- "Bo"
+if(length(which(effort$Platform %in% c("MBBow", "Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_ManyberriesBow (Manyberries)", "Fujinon_ManyberriesBow", "Fujinon_CEMOREBow(CEMORE)", "Fujinon_CEMOREBow")))!=0){
+  effort[which(effort$Platform %in% c("MBBow", "Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_ManyberriesBow (Manyberries)", "Fujinon_ManyberriesBow", "Fujinon_CEMOREBow(CEMORE)","Fujinon_CEMOREBow")),]$Platform <- "Bo"
 }
 if(length(which(effort$Platform =="RBFly_sitting"))!=0){
   effort[which(effort$Platform =="RBFly_sitting"),]$Platform <- "RBFly_sit"
@@ -590,12 +621,12 @@ if(length(which(effort$Platform =="Fujinon_RBbridge"))!=0){
 if(length(which(effort$Platform %in% c("Fujinon_VecBridge","Fujinon_TanuBridge")))!=0){
   effort[which(effort$Platform %in% c("Fujinon_VecBridge","Fujinon_TanuBridge")),]$Platform <- "Br"
 }
-if(length(which(effort$Platform %in% c("Fujinon_TanuMonkey")))!=0){
-  effort[which(effort$Platform %in% c("Fujinon_TanuMonkey")),]$Platform <- "Mo"
+if(length(which(effort$Platform %in% c("Fujinon_TanuMonkey", "Fujinon_TullyMonkeyIsland", "Fujinon_FranklinMI")))!=0){
+  effort[which(effort$Platform %in% c("Fujinon_TanuMonkey", "Fujinon_TullyMonkeyIsland", "Fujinon_FranklinMI")),]$Platform <- "Mo"
 }
-if(length(which(effort$Platform %in% c("Fujinon_FranklinMI")))!=0){
-  effort[which(effort$Platform %in% c("Fujinon_FranklinMI")),]$Platform <- "FR"
-}
+# if(length(which(effort$Platform %in% c("Fujinon_FranklinMI")))!=0){
+#   effort[which(effort$Platform %in% c("Fujinon_FranklinMI")),]$Platform <- "FR"
+# }
 if(length(which(effort$Platform %in% c("Fujinon_CharleyCBow","Fujinon_CharleyC")))!=0){
   effort[which(effort$Platform %in% c("Fujinon_CharleyCBow","Fujinon_CharleyC")),]$Platform <- "CC"
 }
@@ -703,6 +734,7 @@ if((vessel == "MB" & max(gps$Speed) >27) |
    (vessel == "RB" & max(gps$Speed) >28) |
    (vessel == "TA" & max(gps$Speed) >20) |
    (vessel == "VE" & max(gps$Speed) >20) |
+   (vessel == "TU" & max(gps$Speed) >20) |
    (vessel == "FR" & max(gps$Speed) >25)){
   x <- readline(prompt = cat(paste("\nThere are some suspiciously high speeds (", max(gps$Speed), ") in the gps data. Do any of these need to be corrected?   [click here & type Yes or No & hit Enter]    \n\n", sep=" ")))
   if(x %ni% c("NO","no","No","N","n")){
@@ -877,8 +909,8 @@ sightings$Method <- sightings$Reticle.Instr
 #unique(sightings$Method)
 sightings$Platform <- NA
 
-if(nrow(sightings[which(sightings$Method %in% c("Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_ManyberriesBow(Manyberries)", "Fujinon_ManyberriesBow", "Fujinon_CEMOREBow(CEMORE)")),])!=0){
-  sightings[which(sightings$Method %in% c("Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_ManyberriesBow(Manyberries)", "Fujinon_ManyberriesBow", "Fujinon_CEMOREBow(CEMORE)")),]$Platform <- "Bo"
+if(nrow(sightings[which(sightings$Method %in% c("Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_ManyberriesBow(Manyberries)", "Fujinon_ManyberriesBow", "Fujinon_CEMOREBow(CEMORE)", "Fujinon_CEMOREBow")),])!=0){
+  sightings[which(sightings$Method %in% c("Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_ManyberriesBow(Manyberries)", "Fujinon_ManyberriesBow", "Fujinon_CEMOREBow(CEMORE)", "Fujinon_CEMOREBow")),]$Platform <- "Bo"
 }
 
 if(nrow(sightings[which(sightings$Method %in% c("Fujinon_bridge", "Fujinon_MBBridge")),])!=0){
@@ -903,10 +935,18 @@ if(nrow(sightings[which(sightings$Method %in% c("Fujinon_CharleyC","Fujinon_Char
 }# for GreatNorthern
 if(nrow(sightings[which(sightings$Method %in% c("Fujinon_GreatNorthern","Fujinon_GreatNorthernBow")),])!=0){
   sightings[which(sightings$Method%in% c("Fujinon_GreatNorthern","Fujinon_GreatNorthernBow")),]$Platform <- "Fujinon_GN"
-}# for Franklin
+}# for Titan Junior
 if(nrow(sightings[which(sightings$Method %in% c("Fujinon_TitanJunior")),])!=0){
   sightings[which(sightings$Method%in% c("Fujinon_TitanJunior")),]$Platform <- "Fujinon_TJ"
 }
+# For Tully
+if(nrow(sightings[which(sightings$Method %in% c("Fujinon_TullyMonkeyIsland")),])!=0){
+  sightings[which(sightings$Method%in% c("Fujinon_TullyMonkeyIsland")),]$Platform <- "Mo"
+}
+# # For Vector
+# if(nrow(sightings[which(sightings$Method %in% c("Fujinon_TullyMonkeyIsland")),])!=0){
+#   sightings[which(sightings$Method%in% c("Fujinon_TullyMonkeyIsland")),]$Platform <- "Mo"
+# }
 
 #If there is a reported distance, change the defaulted method (originally Reticle Instrument) to NE
 if(sum(!is.na(sightings$Distance))!=0){
@@ -916,8 +956,8 @@ if(sum(!is.na(sightings$Distance))!=0){
 # unique(sightings$Platform)
 
 #Adjust Method entries so they will work with our pre-written functions ('Bi', 'BE', 'NE'):
-if(sum(sightings$Method %in% c("Fujinon_bridge", "Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_ManyberriesBow(Manyberries)", "Fujinon_ManyberriesBow", "Fujinon_MBBridge", "Fujinon_RBbridge", "Fujinon_RBFly","Fujinon_VecBridge","Fujinon_TanuMonkey","Fujinon_TanuBridge", "Fujinon_FranklinMI","Fujinon_CharleyC","Fujinon_CharleyCBow(CharleyC)","Fujinon_GreatNorthern","Fujinon_GreatNorthernBow", "Fujinon_TitanJunior","Fujinon_CEMOREBow(CEMORE)"))!=0){
-  sightings[which(sightings$Method %in% c("Fujinon_bridge","Fujinon_MBbow", "Fujinon_ManyberriesBow(Manyberries)", "Fujinon_ManyberriesBow", "Fujinon_MBBow", "Fujinon_MBBridge", "Fujinon_RBbridge", "Fujinon_RBFly", "Fujinon_VecBridge","Fujinon_TanuMonkey","Fujinon_TanuBridge", "Fujinon_FranklinMI","Fujinon_CharleyC","Fujinon_CharleyCBow(CharleyC)", "Fujinon_GreatNorthern","Fujinon_GreatNorthernBow", "Fujinon_TitanJunior","Fujinon_CEMOREBow(CEMORE)")),]$Method <- "Bi"
+if(sum(sightings$Method %in% c("Fujinon_bridge", "Fujinon_MBBow", "Fujinon_MBbow", "Fujinon_ManyberriesBow(Manyberries)", "Fujinon_ManyberriesBow", "Fujinon_MBBridge", "Fujinon_RBbridge", "Fujinon_RBFly","Fujinon_VecBridge","Fujinon_TanuMonkey","Fujinon_TanuBridge", "Fujinon_FranklinMI","Fujinon_CharleyC","Fujinon_CharleyCBow(CharleyC)","Fujinon_GreatNorthern","Fujinon_GreatNorthernBow", "Fujinon_TitanJunior","Fujinon_CEMOREBow(CEMORE)", "Fujinon_CEMOREBow", "Fujinon_TullyMonkeyIsland"))!=0){
+  sightings[which(sightings$Method %in% c("Fujinon_bridge","Fujinon_MBbow", "Fujinon_ManyberriesBow(Manyberries)", "Fujinon_ManyberriesBow", "Fujinon_MBBow", "Fujinon_MBBridge", "Fujinon_RBbridge", "Fujinon_RBFly", "Fujinon_VecBridge","Fujinon_TanuMonkey","Fujinon_TanuBridge", "Fujinon_FranklinMI","Fujinon_CharleyC","Fujinon_CharleyCBow(CharleyC)", "Fujinon_GreatNorthern","Fujinon_GreatNorthernBow", "Fujinon_TitanJunior","Fujinon_CEMOREBow(CEMORE)","Fujinon_CEMOREBow", "Fujinon_TullyMonkeyIsland")),]$Method <- "Bi"
 }
 
 
@@ -1160,6 +1200,7 @@ req.conditions <- c("Platform","Transect.ID","Effort_Instrument","PORT.Visibilit
 #Find any ON-effort start records with at least one empty condition required for analysis
 #Fix missing effort data
 effort$Glare[ON.start] <- ifelse(is.na(effort$Glare[ON.start]), "None", effort$Glare[ON.start])
+effort$Glare[ON.start] <- ifelse(effort$Glare[ON.start] == 0, "None", effort$Glare[ON.start])
 effort$Left.Glare.Limit <- ifelse(effort$Glare=="None", "None", effort$Left.Glare.Limit)
 effort$Right.Glare.Limit <- ifelse(effort$Glare=="None", "None", effort$Right.Glare.Limit)
 effort$Precipitation[ON.start] <- ifelse(is.na(effort$Precipitation[ON.start]), "Clear", effort$Precipitation[ON.start])
@@ -1289,24 +1330,24 @@ cat("\n\nMaking sure trackline doesn't intercept land (this may take several min
 
 # load land shapefile
 #-------- EK edit (for diff shapefile, and using sf instead of sp---------------
-# if(!exists("bc_coast")){
+if(!exists("bc_coast")){
   # bc_coast <- readOGR("C:\\Users\\keppele\\Documents\\ArcGIS\\basemaps\\CoastLand.shp", verbose = FALSE) #Load in CHS coastline shapefile (in WGS84)
   # bc_coast <- sf::st_read(dsn="C:\\Users\\keppele\\Documents\\ArcGIS\\basemaps\\CoastLand.shp") %>%
   # st_as_sf() %>%
   #   st_transform(crs = 4326) #Load in CHS coastline shapefile (in WGS84)
   # bc_coast <- st_transform(bc_coast, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0")
   # EK edit: change to using sf package
-bc_coast <- read_sf("C:\\Users\\keppele\\Documents\\ArcGIS\\basemaps\\Coastland\\CoastLand.shp") %>%
-    st_transform(crs = 3005) %>% dplyr::select(geometry)
-# }
+  bc_coast <- sf::st_read(dsn="C:\\Users\\keppele\\Documents\\ArcGIS\\basemaps\\Coastland") %>%
+    st_transform(crs = 3156) %>% mutate(NAME = "BC_COAST") %>% dplyr::select(NAME) %>% st_sf(agr = "constant")
+}
 cat("\n - Land shapefile loaded")
-#Make trackpoints
+# Make trackpoints
 # BP <- SpatialPointsDataFrame(cbind(effort$Longitude,effort$Latitude), data=effort, proj4string=CRS("+proj=longlat"))
 # BP <- spTransform(BP, CRSobj = "+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0")
 # EK edit: change to using sf package
 BP <- st_as_sf(effort, coords = c("Longitude","Latitude"),crs=4326) %>%
-  st_transform(BP, crs=3005)
-
+  st_transform(BP, crs=3156)
+bc_coast <- bc_coast %>% st_transform(crs = 3156)
 cat("\n - Track points constructed")
 #Clip land by extent of trackpoints
 if(!exists("bc_clip")){
@@ -1414,7 +1455,7 @@ cat("\n\n\n Effort Table...")
 # }
 #Final Effort Table
 # write.table(Effort.Final,paste(getwd(),u,"OUTPUT FILES",u,"dataEffort table",u,"PRISMM_dataEffort",surveyID.abbrev, ".txt", sep = ""), sep="\t",row.names=F)
-if(data.source=="cemore"){
+if(data.source %in% c("cemore", "CRP")){
   write.table(Effort.Final,paste(getwd(),u,paste0("OUTPUT FILES ",data.source),u,"dataEffort table",u,data.source,"_Effort_",year,"_",month,".txt", sep = ""), sep="\t",row.names=F)
   cat(paste("\n Saved as: '",data.source,"_dataEffort",year,"_",month, ".txt'", sep = ""))
 }
@@ -1483,7 +1524,7 @@ cat("\n\n\n Sightings Table...")
 #   file.remove(list.files(paste(getwd(),u,"OUTPUT FILES",u,"dataSightings table", sep=""), full.names = TRUE))
 # }
 # write.table(positions,paste(getwd(),u,"OUTPUT FILES",u,"dataSightings table",u,"PRISMM_dataSightings",surveyID.abbrev, ".txt", sep = ""), sep="\t",row.names=F)
-if(data.source=="cemore"){
+if(data.source%in% c("cemore", "CRP")){
   write.table(positions,paste(getwd(),u,paste0("OUTPUT FILES ",data.source),u,"dataSightings table",u,data.source,"_Sightings_",year,"_",month,".txt", sep = ""), sep="\t",row.names=F)
   cat(paste("\n Saved as: '",data.source,"_dataSightings",year,"_",month,".txt'", sep = ""))
 }
@@ -1497,8 +1538,18 @@ if(data.source=="mmcp"){
 cat("\n\n\n Sightings Corrected Position Shapefile...")
 #Export shapefile (true positions):
 # EK edit: writeOGR deprecated, switch to st_write which has more restrictions on field types and length of file/field names, etc.
-AP <- SpatialPointsDataFrame(cbind(positions$"final.lon",positions$final.lat), data=positions, proj4string=CRS("+proj=longlat")) %>%
-  st_as_sf() %>% st_transform(crs="+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0")
+# EK edit - use sf instead of sp (Feb 11, 2025)
+# AP <- SpatialPointsDataFrame(cbind(positions$"final.lon",positions$final.lat), data=positions, proj4string=CRS("+proj=longlat")) %>%
+#   st_as_sf() %>% st_transform(crs="+proj=utm +zone=9N +datum=WGS84 +towgs84=0,0,0")
+# AP <- AP %>% mutate(gpsdate=date(gpstimeutc),
+#                     gpstime=paste(hour(gpstimeutc),minute(gpstimeutc),second(gpstimeutc),sep="_"),
+#                     tind_date=date(time_index),
+#                     tind_time=paste(hour(time_index),minute(time_index),second(time_index),sep="_"),
+#                     sid=substr(SurveyID,8,17)) %>%
+# dplyr::select(-c(SurveyID, gpstimeutc, time_index))
+AP <- st_as_sf(positions, coords = c("final.lon", "final.lat"),crs = 4326, remove=F) %>%
+  # st_transform(crs=st_crs(bc_coast))
+  st_transform(crs=4326)
 AP <- AP %>% mutate(gpsdate=date(gpstimeutc),
                     gpstime=paste(hour(gpstimeutc),minute(gpstimeutc),second(gpstimeutc),sep="_"),
                     tind_date=date(time_index),
@@ -1512,22 +1563,22 @@ AP <- AP %>% mutate(gpsdate=date(gpstimeutc),
 #   file.remove(list.files(paste(getwd(),u,"OUTPUT FILES",u,"dataSightings_True Positions", sep=""), full.names = TRUE))
 # }
 
-# if(data.source=="cemore"){
+# if(data.source%in% c("cemore", "CRP")){
 #   # writeOGR(AP, dsn = paste(getwd(),u,paste0("OUTPUT FILES ",data.source),u,"dataSightings_True Positions",u,data.source,"_Sightings_truePositions_WGS84_UTM9N_",year,"_",month,".shp", sep=""), layer = paste("dataSightings",year,"_",month,"_truePositions_WGS84_UTM9N_",vessel, sep = ""), driver = "ESRI Shapefile", overwrite_layer = T)
 #   st_write(paste(getwd(), u,
 #   paste0("OUTPUT FILES ",data.source), u,
 #   "dataSightings_True Positions", u,
 #   data.source,"_Sightings_truePositions_WGS84_UTM9N_",year,"_",month,".shp", sep=""), append=F)}
-# if(!data.source=="cemore"){
+# if(!data.source%in% c("cemore", "CRP")){
 #   st_write(AP, dsn = paste(getwd(),u,paste0("OUTPUT FILES ",data.source),u,"dataSightings_True Positions",u,data.source,"_Sightings_truePositions_WGS84_UTM9N_",year,"_",month,"_",vessel,".shp", sep=""), driver = "ESRI Shapefile")
 # }
-if(data.source=="cemore"){
+if(data.source%in% c("cemore", "CRP")){
   # writeOGR(AP, dsn = paste(getwd(),u,paste0("OUTPUT FILES ",data.source),u,"dataSightings_True Positions",u,data.source,"_Sightings_truePositions_WGS84_UTM9N_",year,"_",month,".shp", sep=""), layer = paste("dataSightings",year,"_",month,"_truePositions_WGS84_UTM9N_",vessel, sep = ""), driver = "ESRI Shapefile", overwrite_layer = T)
   # st_write(AP, dsn="OUTPUT FILES cemore/TEST.shp", driver="ESRI Shapefile",append=F)
-  file.name <- paste0("OUTPUT FILES cemore/dataSightings_True Positions/cemore_WGS84_UTM9N_",year,"_",month,".shp") #prev file name format too long
+  file.name <- paste0("OUTPUT FILES ",data.source,"/dataSightings_True Positions/cemore_WGS84_UTM9N_",year,"_",month,".shp") #prev file name format too long
   st_write(AP, dsn=file.name, driver="ESRI Shapefile",append=F)
 }
-if(!data.source=="cemore"){
+if(!data.source%in% c("cemore", "CRP")){
   # writeOGR(AP, dsn = paste(getwd(),u,paste0("OUTPUT FILES ",data.source),u,"dataSightings_True Positions",u,data.source,"_Sightings_truePositions_WGS84_UTM9N_",year,"_",month,"_",vessel,".shp", sep=""), layer = paste("dataSightings",year,"_",month,"_truePositions_WGS84_UTM9N_",vessel, sep = ""), driver = "ESRI Shapefile", overwrite_layer = T)
   st_write(AP, dsn=paste0("OUTPUT FILES ", data.source, "/dataSightings_True Positions/", data.source,"_Sightings_truePositions_WGS84_UTM9N_",year,"_",month,"_",vessel,".shp"), driver="ESRI Shapefile",append=F)
 }

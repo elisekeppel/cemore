@@ -3,7 +3,20 @@ breaks=NULL,
 bin.width=NULL,
 nc=NULL,
 # jitter.v=rep(0,3)
-# showpoints=F
+showpoints=F,
+
+fll.var = NULL,
+shp.var = NULL,
+col.var = NULL,
+
+pt.size = 2,
+show.prob.det.1 = F,
+# var1 = NULL,
+# var2 = NULL,
+# var3 = NULL,
+cols = NULL,
+shps = NULL,
+fll  = NULL,
 # subset=NULL
 # pl.col="lightgrey"
 # pl.den=NULL
@@ -17,30 +30,36 @@ ylab = "Detection probability",
 x.labs=NULL,
 y.labs=NULL){
 
-  model <- x #hw1.5.hn.v
+  model <- x$ddf #hw1.5.hn.v
   # model <-  hw1.5.hn.v #hp.0.65.hn.bfc.obs
   lower <- 0
 vname <- "distance"
-dat <- model$ddf$data
+dat <- model$data
 binwidth <- bin.width
 
-width <- model$ddf$meta.data$width
-left <- model$ddf$meta.data$left
-ddfobj <- model$ddf$ds$aux$ddfobj
-point <- model$ddf$ds$aux$point
-max.range <- model$ddf$ds$aux$int.range
+width <- model$meta.data$width
+left <- model$meta.data$left
+ddfobj <- model$ds$aux$ddfobj
+point <- model$ds$aux$point
+max.range <- model$ds$aux$int.range
 
   # normalize <- FALSE
   # range.varies <- FALSE
   selected <- rep(TRUE, nrow(ddfobj$xmat))
+  sp <- unique(model$data$Species)
 
-  xmat <- ddfobj$xmat[selected,]
-  z <- ddfobj$scale$dm[selected, , drop=FALSE]
+  xmat <- ddfobj$xmat[selected,] %>% mutate(Species = sp)
+  if (!is.null(ddfobj$scale)) {
+    z <- ddfobj$scale$dm[selected, , drop = FALSE]
+  }
+  else {
+    z <- matrix(1, nrow = 1, ncol = 1)
+  }
 
-  if(length(model$ddf$fitted)==1){
-    pdot <- rep(model$ddf$fitted, sum(as.numeric(selected)))
+  if(length(model$fitted)==1){
+    pdot <- rep(model$fitted, sum(as.numeric(selected)))
   }else{
-    pdot <- model$ddf$fitted[selected]
+    pdot <- model$fitted[selected]
     Nhat <- sum(1/pdot)
   }
 
@@ -72,13 +91,13 @@ max.range <- model$ddf$ds$aux$int.range
   # Binning
   # create intervals of distance (breaks) for the chosen number of classes (nc).
   if(is.null(breaks)){
-    if(is.null(model$ddf$meta.data$binned)){
+    if(is.null(model$meta.data$binned)){
       binned <- FALSE
     }else{
-      binned <- model$ddf$meta.data$binned
+      binned <- model$meta.data$binned
     }
     if(binned){
-      breaks <- model$ddf$ds$aux$breaks
+      breaks <- model$ds$aux$breaks
       nc <- length(breaks)-1
     }else{
       breaks <- c(max(0, (max.range[1])),
@@ -91,7 +110,7 @@ max.range <- model$ddf$ds$aux$int.range
   }
 
   # test breaks for validity and reset as needed
-  breaks <- mrds:::test.breaks(breaks, model$ddf$meta.data$left, width)
+  breaks <- mrds:::test.breaks(breaks, model$meta.data$left, width)
   nc <- length(breaks)-1
   lower <- min(breaks)
   upper <- max(breaks)
@@ -202,7 +221,7 @@ max.range <- model$ddf$ds$aux$int.range
     if(is.null(bin.width)) bin.width <- width/nc
 
     # ggplot(dat)+geom_histogram(aes(x=distance), colour="grey30", fill="grey70", breaks = breaks)#+
-    ggplot(hh2) +
+    g <- ggplot(hh2) +
       geom_col(aes(x=mids, y=counts), colour="grey30", fill="grey70", width = bin.width) +
       xlab(xlab) + ylab(ylab) +
       theme(panel.background = element_rect(colour="black",fill="white", linetype ="solid"),
@@ -213,6 +232,23 @@ max.range <- model$ddf$ds$aux$int.range
       geom_line(data=dots, aes(x=xgrid, y=linevalues)) +
       geom_line(data=dots, aes(x=xgrid, y=0.15), linetype=2, colour="grey40")
 
+    if(show.prob.det.1) g <- g + geom_line(data=dots, aes(x=xgrid, y=0.10), linetype=3, colour="grey40")
+
+if(showpoints){
+  point_vals <- xmat %>% mutate(p = detfct(distance, ddfobj, select = selected,
+                                           width = width, left = left))
+  if(is.null(cols)) cols = c("black", "red", "green", "blue")
+  if(is.null(shps)) shps = c(21, 24, 22, 23, 25)
+if(is.null(fll)) fll <- c("black", "red", "green", "blue")
+  g +
+    geom_point(data = point_vals, size = pt.size, aes(x=distance, y = p, shape = .data[[shp.var]], colour = .data[[col.var]], fill = .data[[fll.var]])) +
+    scale_colour_manual(values = cols) +
+    scale_shape_manual(values = shps) +
+    scale_fill_manual(values = fll) +
+    guides(fill = guide_legend(override.aes = list(shape = 21, colour = NA))) +
+    # guides(shape = guide_legend(override.aes = list(fill = "black"))) #+
+  guides(colour = guide_legend(override.aes = list(shape = 21, fill = NA)))
+}else{g}
 
     }
 # plot_ds.x(hw1.5.hn.v)

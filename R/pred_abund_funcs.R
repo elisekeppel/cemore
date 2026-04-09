@@ -47,7 +47,7 @@
 # }
 
 # just updating the above version to paper format
-summod <- function(mod, newdata, off.set = newdata$off.set, abund = F, pred_by = NULL, forplot = F){#
+summod <- function(mod, newdata, off.set = newdata$off.set, abund = F, forplot = F){ # pred_by = NULL
   # mod.name <- deparse(substitute(mod))
   summ     <- summary(mod, digits = 3)
   # if(summ$family$family %like% "Negative Binomial") fam <- "nb"
@@ -97,7 +97,7 @@ summod <- function(mod, newdata, off.set = newdata$off.set, abund = F, pred_by =
     #   # ab <- round(sum(predict(mod, newdata = newdata, off.set=newdata$off.set), na.rm = T), digits=0)
     #   df$ab.est <- ab[,2]
     # }else{
-    ab <- pred_ab_spt(mod, newdata = newdata, pred_by = pred_by)
+    ab <- pred_ab_spt(mod, newdata = newdata) # , pred_by = pred_by
     df$Est.Ab <- ab[,2]
     # df$model <- ab[,1]
   }
@@ -110,27 +110,27 @@ summod <- function(mod, newdata, off.set = newdata$off.set, abund = F, pred_by =
 }
 
 
-# summarize_dsm2 <- function(model){
-#
-#   summ <- summary(model)
-#
-#
-#   dat <- data.frame(response = model$family$family,
-#                     AIC      = AIC(model))
-#
-#   # take the smooth names
-#   smooths <- rownames(summ$s.table)
-#   # remove their ending bracket, add a comma
-#   smooths <- sub(")", ",", smooths)
-#   # paste in their edfs, rounded
-#   smooths <- paste(smooths, signif(summ$s.table[,1], 3))
-#   # close the bracket again
-#   smooths <- paste(smooths, ")", sep="")
-#   # paste them all together in a list into dat
-#   dat$terms <- paste(smooths, collapse=", ")
-#
-#   return(dat)
-# }
+summarize_dsm2 <- function(model){
+
+  summ <- summary(model)
+
+
+  dat <- data.frame(response = model$family$family,
+                    AIC      = AIC(model))
+
+  # take the smooth names
+  smooths <- rownames(summ$s.table)
+  # remove their ending bracket, add a comma
+  smooths <- sub(")", ",", smooths)
+  # paste in their edfs, rounded
+  smooths <- paste(smooths, signif(summ$s.table[,1], 3))
+  # close the bracket again
+  smooths <- paste(smooths, ")", sep="")
+  # paste them all together in a list into dat
+  dat$terms <- paste(smooths, collapse=", ")
+
+  return(dat)
+}
 
 modsums <- function(mod_list, newdata, off.set = newdata$off.set, abund = T, pred_by = F) {
   print(paste("not working - use ab_sum_pred_by() instead"))
@@ -169,7 +169,8 @@ pred.ab <- function(mod, newdata, off.set = newdata$off.set) {
 }
 
 
-ab_sum_pred_by <- function(mod_list, abund = T, newdata = NULL, pred_by = NULL){#}, res="sum"){
+ab_sum_pred_by <- function(mod_list, abund = T, newdata = NULL){ # pred_by = NULL, res="sum")
+  cat("make sure model list is prepped using lst() not c() or list())")
   if(any(class(mod_list) == "list")){
     names <- names(mod_list)
   }else{
@@ -177,8 +178,8 @@ ab_sum_pred_by <- function(mod_list, abund = T, newdata = NULL, pred_by = NULL){
     mod_list <- lst(mod_list)
   }
   # res <- purrr::map_df(mod_list, pred_ab_spt, newdata = newdata, pred_by = pred_by)#, res="sum")
-  res <- purrr::map_df(mod_list, summod, abund = T, newdata = newdata, pred_by = pred_by)#, res="sum")
-  # res$model <- names
+  res <- purrr::map_df(mod_list, summod, abund = T, newdata = newdata) # pred_by = pred_by, res="sum")
+  res$model <- names
   # if(unique(res$model %like% "mod")) res$model <- NULL
   res %<>% arrange(Family, AIC)
 

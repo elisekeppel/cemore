@@ -1,3 +1,5 @@
+mo2Num <- function(x) match(tolower(x), tolower(month.abb))
+
 names_lower <- function(x){
   names(x) <- tolower(names(x))
   x
@@ -33,6 +35,15 @@ standardize <- function(x) {
     return(x)
   }
 }
+# standardize <- function(x) {
+#   if(length(unique(x))>2){
+#     mean.x <- mean(x[which(!x %like% "Inf")], na.rm=T)
+#     sd.x <- sd(x[which(!x %like% "Inf")], na.rm=T)
+#     return((x-mean.x)/(2*sd.x))
+#   } else {
+#     return(x)
+#   }
+# }
 
 binned <- function(x, breaks = NULL, min = NULL, max = NULL, by = NULL, dec=2){
   if(is.null(breaks)){

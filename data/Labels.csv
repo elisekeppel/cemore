@@ -1,0 +1,27 @@
+Label,Label_FR,Type,Subtype,LAT,LONG,SARFigure1,ResDocsFig1,WhalesResDoc,SmallVesselPresentatio
+Vancouver,Vancouver,Point,City,49.2827,-123.1207,Yes,Yes,Yes,No
+Victoria,Victoria,Point,City,48.4284,-123.3656,Yes,Yes,Yes,No
+Port Renfrew,Port Renfrew,Point,City,48.553,-124.4223,Yes,Yes,Yes,Yes
+Sooke,Sooke,Point,City,48.374,-123.7356,Yes,Yes,Yes,Yes
+Juan de Fuca Strait,Detroit de Juan de Fuca,Area,Waterway,48.4,-124.25,Yes,Yes,Yes,Yes
+Swiftsure Bank,Banc Swiftsure,Area,Waterway,48.55,-125,Yes,Yes,Yes,Yes
+La Perouse Bank,Banc La Perouse,Area,Waterway,48.66666667,-125.8333333,No,Yes,Yes,No
+Nitinat,Nitinat,Point,City,48.6689,-124.8518,No,Yes,Yes,No
+Port Angeles,Port Angeles,Point,City,48.1181,-123.4307,No,Yes,Yes,No
+Neah Bay,,Point,City,48.3681,-124.625,No,Yes,No,No
+Jordan River,Riviere Jordan,Point,City,48.4205,-124.0448,Yes,Yes,Yes,Yes
+Haro Strait,Detroit de Haro,Area,Waterway,48.5669,-123.2344,Yes,Yes,Yes,Yes
+Boundary Pass,Passage Boundary,Area,Waterway,48.7401031,-123.0763009,Yes,Yes,Yes,Yes
+VANCOUVER ISLAND,ILE DE VANCOUVER,Area,Landmass,48.8,-124.3,Yes,Yes,Yes,Yes
+WASHINGTON,WASHINGTON,Area,Landmass,48.1,-124.3,Yes,Yes,Yes,Yes
+San Juan Isl,,Area,Landmass,48.55518,-123.11758,No,No,Yes,No
+Salmon Bank,,Area,Waterway,48.4233809,-122.9759877,No,No,No,No
+Pender Isls,,Area,Landmass,48.79415872,-123.2870236,No,No,Yes,No
+Saturna Isl,,Area,Landmass,48.78500761,-123.149878,No,No,Yes,No
+Fraser River,Riviere Fraser,Area,Waterway,49.10894889,-123.1175772,Yes,Yes,Yes,No
+Swanson Channel,,Area,Waterway,48.7887,-123.3394,Yes,No,Yes,No
+Strait of Georgia,Detroit de Georgia,Area,Waterway,49.2,-123.6,Yes,Yes,Yes,No
+Puget Sound,Detroit de Puget,Area,Waterway,48.1,-122.6,No,Yes,Yes,No
+Cape Flattery,Cap Flattery,Point,City,48.3831,-124.7144,No,Yes,Yes,No
+Carmanah Point,Pointe Carmanah,Point,City,48.6117,-124.7511,No,Yes,Yes,No
+Active Pass,,Area,Waterway,48.8598,-123.3335,No,No,Yes,No

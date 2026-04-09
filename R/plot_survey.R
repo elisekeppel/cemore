@@ -42,7 +42,8 @@ plot_survey <- function(sgt_data = NULL,
                         incidentals = F,
                         exclude_sp = NULL,
                         incl_porps = F, # include hw and porps in incidentals
-                        plot_grp_sz=NULL,# c(1.4, 2.4, 3)
+                        # plot_grp_sz=NULL,# c(1.4, 2.4, 3)
+                        plot_grp_sz= c(1.4, 2.4, 3),
 
                         specify_pt_size=NULL,
                         sgt_colours=NULL,
@@ -56,23 +57,25 @@ plot_survey <- function(sgt_data = NULL,
                         facet_yearSeason=F,
                         strip_size=10,
                         cols,
-                        text_size, # for axis text and geom_text ie.  10 * 25.4 / 72.27 (scaling ratio)
-                        label_size, # in theme(), like legend text and legend title ie. 10
+                        text_size = 10 * 25.4 / 72.27, # for axis text and geom_text ie.  10 * 25.4 / 72.27 (scaling ratio)
+                        label_size = 10, # in theme(), like legend text and legend title ie. 10
                         axis_angle=0,
                         rare_spp=F,
                         leg.pos = "bottom",
                         leg.pos2 = "bottom",
+                        ncols = 1,
                         leg.box.spacing=NULL,
                         legend_justification=NULL,
                         leg_key_spacing_x = unit(0.25, "cm"),
                         leg_key_spacing_y = unit(0.25, "cm"),
-                        leg_key_size = unit(1, "cm"),
+                        # leg_key_size = unit(1, "cm"),
                         legend_placement =NULL,
                         legend_spacing=NULL,
                         legend_margin=NULL,
                         leg.title.pos="top",
                         leg_box = "vertical",
-                        leg_dir = "vertical",
+                        leg_dir_spp = "vertical",
+                        leg_dir_sz = "vertical",
                         grid_label = TRUE,
                         coord = NULL,
                         print = T,
@@ -95,7 +98,9 @@ plot_survey <- function(sgt_data = NULL,
     months <- month
     survey_title <- paste("All surveys to ", month.abb[month], year)
   }
-  ap_sf <- sgt_data %>% dplyr::select(year,month,month_abb, bimonth, Species,Group_Size,season,seasonYear)
+  ap_sf <- sgt_data %>% dplyr::select(year,month,month_abb,
+                                      # bimonth,
+                                      Species,Group_Size,season,seasonYear)
   if(no_on_eff_sp) ap_sf <- ap_sf[0,]
 
   # if(leg.pos=="bottom") {
@@ -107,7 +112,7 @@ plot_survey <- function(sgt_data = NULL,
   #     leg_box <- "vertical"
   # }
 
-  if(is.null(legend_margin)) legend_margin <- 0
+  if(is.null(legend_margin)) legend_margin <- 1
 
   # ----------------------------------------------------------------------
   # ----------------- LOAD SPATIAL FILES --------------------------------
@@ -240,7 +245,7 @@ plot_survey <- function(sgt_data = NULL,
     #   }
 
     if(effort_by_day){
-      col <- c(paste0(c(RColorBrewer::brewer.pal(12, "Paired"))))
+      col <- c(paste0(c(RColorBrewer::brewer.pal(9, "Set1"))), paste0(c(RColorBrewer::brewer.pal(8, "Dark2"))))
       g <- g +
         # geom_sf(data = effort_data, size = 0.25, aes(colour = as.factor(date))) +
         geom_sf(data = effort_data, linewidth = 0.25, aes(colour = as.factor(date))) +
@@ -268,7 +273,7 @@ plot_survey <- function(sgt_data = NULL,
                 "5" = pal[4]) #purple
       if(effort_by_vis){
 
-        g <- g + geom_sf(data = effort_data, aes(linewidth =Visibility,colour=beauf_char)) +
+        g <- g + geom_sf(data = effort_data, aes(linewidth =Visib,colour=beauf_char)) +
           scale_linewidth_manual(name="Visibility",values=c(1.75, 1.3, 0.5), labels = c("G&E","Moderate","P"), guide = "legend") +
           ggnewscale::new_scale("linewidth") +
           scale_colour_manual(name="Beaufort", values = bf, guide="legend") +
@@ -419,14 +424,28 @@ plot_survey <- function(sgt_data = NULL,
   if(plot_sgt){
     if(incidentals){
       inc <- get_incid(single_survey = single_survey, include_hw_porps = incl_porps, Year=year, Month=month) %>%
-        tidyr::separate(GPS.Pos, into = c("lat", "lon"), sep = "N") %>%
-        dplyr::mutate(lon = substr(lon, 2, nchar(lon)-3)) %>%
-        dplyr::mutate(lat = substr(lat, 1, nchar(lat)-2)) %>%
+        tidyr::separate(GPS.Pos, into = c("lat", "lon"), sep = "N")# %>%
+
+      inc1 <- inc %>% filter(date < lubridate::date("2023-02-28")) %>%
+        dplyr::mutate(lon = substr(lon, 2, nchar(lon)-3),
+                      lat = substr(lat, 1, nchar(lat)-2)) %>%
         tidyr::separate(lon, into = c("lon.deg", "lon.min"), sep = " ") %>%
         tidyr::separate(lat, into = c("lat.deg", "lat.min"), sep = " ") %>%
+        mutate(lon = -(as.numeric(lon.deg) + as.numeric(lon.min)/60),
+               lat = as.numeric(lat.deg) + as.numeric(lat.min)/60) %>%
+        select(-c(lon.deg, lon.min, lat.deg, lat.min))
+
+      inc2 <- inc %>% filter(date > lubridate::date("2023-02-28")) %>%
+        dplyr::mutate(lon = substr(lon, 2, nchar(lon)-2),
+                      lat = substr(lat, 1, nchar(lat)-1)) %>%
+        tidyr::separate(lon, into = c("lon.deg", "lon.min", "lon.sec"), sep = " ") %>%
+        tidyr::separate(lat, into = c("lat.deg", "lat.min", "lat.sec"), sep = " ") %>%
+        mutate(lon = -(as.numeric(lon.deg) + as.numeric(lon.min)/60 + as.numeric(lon.sec)/60),
+               lat = as.numeric(lat.deg) + as.numeric(lat.min)/60 + as.numeric(lat.sec)/60) %>%
+        select(-c(lon.deg, lon.min, lat.deg, lat.min, lon.sec, lat.sec))
+
+      inc <- rbind(inc1, inc2) %>%
         mutate(month = month(date),
-               lon = -(as.numeric(lon.deg) + as.numeric(lon.min)/60),
-               lat = as.numeric(lat.deg) + as.numeric(lat.min)/60,
                Group_Size = Best.Cnt,
                season = factor(dplyr::case_when(
                  month %in% c(1:3) ~ "Winter",
@@ -435,11 +454,13 @@ plot_survey <- function(sgt_data = NULL,
                  month %in% c(10:12)  ~ "Fall"
                ), levels = c("Winter", "Spring", "Summer", "Fall"))
         ) %>%
+        rename(Incidental = Incidental.Sighting) %>%
         st_as_sf(coords = c("lon", "lat"), crs = 4326) %>%
-        dplyr::select("Species","Group_Size", date, "season",geometry)
+        dplyr::select("Species","Group_Size", date, "season",geometry, Incidental)
       if(!is.null(date_cut_off)) inc <- inc %>% filter(date<date_cut_off)
 
-      if(!nrow(inc)<0) ap_sf <- bind_rows(ap_sf,inc)
+      if(!nrow(inc)<0) ap_sf <- bind_rows(ap_sf,inc) #%>% distinct()
+      ap_sf[which(is.na(ap_sf$Incidental)),]$Incidental <- FALSE
 
     }
 
@@ -479,9 +500,9 @@ plot_survey <- function(sgt_data = NULL,
       ap_sf <- ap_sf %>% mutate(Count =case_when(
         is.na(Group_Size) ~ "1",
         Group_Size == 1 ~ "1",
-        Group_Size %in% c(2:5) ~ "2:5",
+        Group_Size %in% c(2:5) ~ "2-5",
         Group_Size >5 ~ ">5"
-      ) %>% factor(levels = c("1", "2:5", ">5")))
+      ) %>% factor(levels = c("1", "2-5", ">5")))
     }else{
       ap_sf <- ap_sf %>% mutate(Count = as.factor("1"))
     }
@@ -489,11 +510,11 @@ plot_survey <- function(sgt_data = NULL,
     #-----------------------------------------------------------
     # REMOVE SPECIES FROM PLOTS
     #-----------------------------------------------------------
-       if(!is.null(exclude_sp)){
-         ap_sf %<>% filter(!Species %in% exclude_sp)
-       }
+    if(!is.null(exclude_sp)){
+      ap_sf %<>% filter(!Species %in% exclude_sp)
+    }
 
-if(!is.null(specify_pt_size)) ap_sf$Count <- as.factor(specify_pt_size)
+    if(!is.null(specify_pt_size)) ap_sf$Count <- as.factor(specify_pt_size)
     #-----------------------------------------------------------
     # set colours, shapes, species factor levels
     #-----------------------------------------------------------
@@ -503,79 +524,65 @@ if(!is.null(specify_pt_size)) ap_sf$Count <- as.factor(specify_pt_size)
     # hp <-  RColorBrewer::brewer.pal(8, "Greens")[8]
     # dp <-  RColorBrewer::brewer.pal(8, "Purples")[8]
 
-    if(!is.null(sgt_colours)) {
-      cols <- sgt_colours
-    }else{
-      cols <-   c("Pacific white-sided dolphin" = pal[8], #pink
-                  # "Humpback whale" = hw, #red
-                  "Humpback whale" = pal[1], #red
-                  # "Harbour porpoise" = hp, #green
-                  "Harbour porpoise" = pal[3], #green
-                  # "Dall\'s porpoise" = dp, #purple
-                  "Dall\'s porpoise" = pal[4], #purple
-                  "Unknown porpoise" = pal[7], #yellow
-                  "KW - northern resident" = "black",
-                  "KW - southern resident" = "black",
-                  "KW - Bigg\'s" = "black",
-                  "KW - unknown ecotype" = "black",
-                  "Fin whale" = pal[5], #orange
-                  "Fin whale - off effort" = "red",
-                  "Grey whale - off effort" = "blue", #grey
-                  "Grey whale" = "blue", #grey
-                  "Minke whale - off effort" = pal[6], #brown
-                  "Minke whale" = pal[6]) #brown
+    if(is.null(sgt_colours)) {
+      sgt_colours <-   c("Pacific white-sided dolphin" = pal[8], #pink
+                         # "Humpback whale" = hw, #red
+                         "Humpback whale" = pal[1], #red
+                         # "Harbour porpoise" = hp, #green
+                         "Harbour porpoise" = pal[3], #green
+                         # "Dall\'s porpoise" = dp, #purple
+                         "Dall\'s porpoise" = pal[4], #purple
+                         "Unknown porpoise" = pal[7], #yellow
+                         "KW - northern resident" = "black",
+                         "KW - southern resident" = "black",
+                         "KW - Bigg\'s" = "black",
+                         "KW - unknown ecotype" = "black",
+                         "Killer whale - northern resident" = "black",
+                         "Killer whale - southern resident" = "black",
+                         "Killer whale - Bigg\'s" = "black",
+                         "Killer whale - unknown ecotype" = "black",
+                         "Fin whale" = pal[5], #orange
+                         "Fin whale - off effort" = "red",
+                         "Grey whale - off effort" = "blue", #grey
+                         "Grey whale" = "blue", #grey
+                         "Minke whale - off effort" = pal[6], #brown
+                         "Minke whale" = pal[6]) #brown
     }
 
-    if(!is.null(species)){
-      shape <- c("Pacific white-sided dolphin" = 21, #diamond
-                 "Humpback whale" = 21, #circle
-                 "Harbour porpoise" = 21,
-                 "Dall\'s porpoise" = 21,
-                 "Unknown porpoise" = 21,
-                 # "KW - northern resident" =21,#= 24, #triangle
-                 # "KW - southern resident"=21,# = 25, #upside down triangle
-                 # "KW - Bigg\'s" = 21,#,           #circle
-                 # "KW - unknown ecotype"=21,# = 21,   #square
-                 "Fin whale" = 21,
-                 "Fin whale - off effort" = 21,
-                 "Grey whale - off effort" = 21,
-                 "Grey whale" = 21,
-                 "Minke whale - off effort" = 21,
-                 "Minke whale" = 21,
-                 "KW - all ecotypes" = 21)
-    }
+    # if(!is.null(species)){
+    shape <- c("Pacific white-sided dolphin" = 21, #diamond
+               "Humpback whale" = 21, #circle
+               "Harbour porpoise" = 21,
+               "Dall\'s porpoise" = 21,
+               "Unknown porpoise" = 21,
+               "KW - northern resident" =24,#= 24, #triangle
+               "KW - southern resident"=25,# = 25, #upside down triangle
+               "KW - Bigg\'s" = 21,#,           #circle
+               "KW - unknown ecotype"=22,# = 21,   #square
+               "Killer whale - northern resident" =24,#= 24, #triangle
+               "Killer whale - southern resident"=25,# = 25, #upside down triangle
+               "Killer whale - Bigg\'s" = 21,#,           #circle
+               "Killer whale - unknown ecotype"=22,# = 21,   #square
+               "Fin whale" = 21,
+               "Fin whale - off effort" = 21,
+               "Grey whale - off effort" = 21,
+               "Grey whale" = 21,
+               "Minke whale - off effort" = 21,
+               "Minke whale" = 21,
+               "KW - all ecotypes" = 21)
 
-    if(!is.null(species) & (any(species %like% "KW") | any(species %like% "killer"))){
-      shape <- c(
-        "Pacific white-sided dolphin" = 21, #diamond
-        "Humpback whale" = 21, #circle
-        "Harbour porpoise" = 21,
-        "Dall\'s porpoise" = 21,
-        "Unknown porpoise" = 21,
-        "Fin whale" = 21,
-        "Fin whale - off effort" = 21,
-        "Grey whale - off effort" = 21,
-        "Grey whale" = 21,
-        "Minke whale - off effort" = 21,
-        "Minke whale" = 21,
-
-        "KW - northern resident" =21, #triangle
-        "KW - southern resident"=21, #upside down triangle
-        "KW - Bigg\'s" = 21,#,           #circle
-        "KW - unknown ecotype"=21)# = 21,   #square
-    }
     if(!is.null(set_shape)) shape <- set_shape
     #-------------------------------------------------------------------
 
- n.sp <- length(unique(sp))
-   if(leg_dir=="vertical"){
-     shp = guide_legend(ncol=1,order = 1,override.aes = list(size=2),title = NULL, direction = leg_dir)
-     fl =  guide_legend(ncol=1,order = 1, direction = leg_dir, title = NULL)
-     }else{
-    shp = guide_legend(ncol=n.sp,order = 1,override.aes = list(size=2),title = NULL, direction = leg_dir)
-    fl =  guide_legend(ncol=n.sp,order = 1, direction = leg_dir, title = NULL)
-    }
-    if(!sp_leg) shp <- fl <- "none"
+    n.sp <- length(unique(sp))
+    # if(leg_dir=="vertical"){
+    #   shp = guide_legend(ncol=1,order = 1,override.aes = list(size=2),title = NULL, direction = leg_dir)
+    #   fl =  guide_legend(ncol=1,order = 1, direction = leg_dir, title = NULL)
+    # }else{
+    #   shp = guide_legend(ncol=n.sp,order = 1,override.aes = list(size=2),title = NULL, direction = leg_dir)
+    #   fl =  guide_legend(ncol=n.sp,order = 1, direction = leg_dir, title = NULL)
+    # }
+    # if(!sp_leg) shp <- fl <- "none"
 
     ####################################################################
     ####################################################################
@@ -585,117 +592,119 @@ if(!is.null(specify_pt_size)) ap_sf$Count <- as.factor(specify_pt_size)
 
     #################### spec_order ##############################
     #################### grp sz ##############################
-    if(spec_order){
-
-      if(leg_dir=="vertical"){
-        shp = guide_legend(ncol=1,order = 1,override.aes = list(size=2),title = NULL, direction = leg_dir)
-        fl =  guide_legend(ncol=1,order = 1, direction = leg_dir, title = NULL)
-      }else{
-        shp = guide_legend(ncol=n.sp,order = 1,override.aes = list(size=2),title = NULL, direction = leg_dir)
-        fl =  guide_legend(ncol=n.sp,order = 1, direction = leg_dir, title = NULL)
-      }
-      if(!sp_leg) shp <- fl <- "none"
-
-      if(!is.null(plot_grp_sz)){
-        for(i in species){
-          x <- ap_sf %>% filter(Species==i)
-          g <- g + geom_sf(data = x, alpha = set.alpha, colour=set.shape.outline.colour,stroke=0.1,
-                           aes(fill = Species, shape = Species, size = Count)) +
-            scale_fill_manual(values = cols, breaks = sp, name = NULL, guide=fl )   +
-            scale_shape_manual(values = shape, breaks = sp, name = NULL, guide=shp) +
-            scale_size_manual(values = plot_grp_sz, name="  Group Size") +
-            ggnewscale::new_scale("shape") +
-            ggnewscale::new_scale("fill") +
-            guides(alpha= "none",
-                   shape=shp,
-                   colour="none",
-                   fill=fl,
-                   size=guide_legend(direction = leg_dir))
-        }
-      }else{
-        #################### NOT grp sz ##############################
-
-        for(i in species){
-          x <- ap_sf %>% filter(Species==i)
-          g <- g + geom_sf(data = x, alpha = set.alpha, colour=set.shape.outline.colour,stroke=0.1,
-                           aes(fill = Species, shape = Species, size = 0.75)) +
-            scale_fill_manual(values = cols, breaks = sp, name = NULL, guide=fl )   +
-            scale_shape_manual(values = shape, breaks = sp, name = NULL, guide=shp) +
-            ggnewscale::new_scale("shape") +
-            ggnewscale::new_scale("fill") +
-            guides(alpha= "none",
-                   shape=shp,
-                   colour="none",
-                   fill=fl,
-                   size="none")
-        }
-      }
-    }else{
+    # if(spec_order){
+    #
+    #
+    #   if(leg_dir=="vertical"){
+    #     shp = guide_legend(ncol=1,order = 1,override.aes = list(size=2),title = NULL, direction = leg_dir)
+    #     fl =  guide_legend(ncol=1,order = 1, direction = leg_dir, title = NULL)
+    #   }else{
+    #     shp = guide_legend(ncol=n.sp,order = 1,override.aes = list(size=2),title = NULL, direction = leg_dir)
+    #     fl =  guide_legend(ncol=n.sp,order = 1, direction = leg_dir, title = NULL)
+    #   }
+    #   if(!sp_leg) shp <- fl <- "none"
+    #
+    #   if(!is.null(plot_grp_sz)){
+    #     for(i in species){
+    #       x <- ap_sf %>% filter(Species==i)
+    #       g <- g + geom_sf(data = x, alpha = set.alpha, colour=set.shape.outline.colour,stroke=0.1,
+    #                        aes(fill = Species, shape = Species, size = Count)) +
+    #         scale_fill_manual(values = cols, breaks = sp, name = NULL, guide=fl )   +
+    #         scale_shape_manual(values = shape, breaks = sp, name = NULL, guide=shp) +
+    #         scale_size_manual(values = plot_grp_sz, name="  Group Size") +
+    #         ggnewscale::new_scale("shape") +
+    #         ggnewscale::new_scale("fill") +
+    #         guides(alpha= "none",
+    #                shape=shp,
+    #                colour="none",
+    #                fill=fl,
+    #                size=guide_legend(direction = leg_dir))
+    #     }
+    #   }else{
+    #     #################### NOT grp sz ##############################
+    #
+    #     for(i in species){
+    #       x <- ap_sf %>% filter(Species==i)
+    #       g <- g + geom_sf(data = x, alpha = set.alpha, colour=set.shape.outline.colour,stroke=0.1,
+    #                        aes(fill = Species, shape = Species, size = 0.75)) +
+    #         scale_fill_manual(values = cols, breaks = sp, name = NULL, guide=fl )   +
+    #         scale_shape_manual(values = shape, breaks = sp, name = NULL, guide=shp) +
+    #         ggnewscale::new_scale("shape") +
+    #         ggnewscale::new_scale("fill") +
+    #         guides(alpha= "none",
+    #                shape=shp,
+    #                colour="none",
+    #                fill=fl,
+    #                size="none")
+    #     }
+    #   }
+    # }else{
       #################### NOT spec_order ##############################
       #################### grp sz ##############################
 
       if(!is.null(plot_grp_sz)){
         if(n.sp==1){
-        g  <- g +
-            geom_sf(data=ap_sf, shape=21, alpha=set.alpha, colour=set.shape.outline.colour, stroke=0.1, fill = sgt_colours, aes(size=Count)) +
-            scale_fill_manual(values = rep(sgt_colours,3), labels=c("1","2:5",">5"), name = "Group Size") +
-            scale_size_manual(values = plot_grp_sz,        labels=c("1","2:5",">5"), name = "Group Size") +
-          guides(fill=guide_legend(title.position=leg.title.pos),
-                 size=guide_legend(title.position=leg.title.pos))
+          if(incidentals){
+            g  <- g +
+              geom_sf(data=ap_sf, shape=21, alpha=set.alpha, colour=set.shape.outline.colour, stroke=0.1, aes(size=Count, fill = Incidental)) +
+              scale_fill_manual(values = c("black", "white")) +
+              scale_size_manual(values = plot_grp_sz,        labels=c("1","2-5",">5"), name = "Group Size") +
+              guides(fill=guide_legend(title.position=leg.title.pos),
+                     size=guide_legend(title.position=leg.title.pos))
+          }else{
+            g  <- g +
+              geom_sf(data=ap_sf, shape=21, alpha=set.alpha, colour=set.shape.outline.colour, stroke=0.1, aes(size=Count, fill = Species)) +
+              scale_fill_manual(values = sgt_colours) +
+              scale_size_manual(values = plot_grp_sz,        labels=c("1","2-5",">5"), name = "Group Size") +
+              guides(fill=guide_legend(title.position=leg.title.pos),
+                     size=guide_legend(title.position=leg.title.pos))
+          }
 
-        # g <-      g + geom_sf(data = ap_sf, alpha = set.alpha, colour="black",stroke=0.1,
-        #                       aes(fill = Species, shape = Species, size = Count)) +#
-        #   # scale_size_manual(values = c(1,2,3), name="Group Size") +
-        #   scale_fill_manual(values = cols, breaks = sp, name = NULL, guide=fl )   +
-        #   scale_shape_manual(values = shape, breaks = sp, name = NULL, guide=shp) +
-        #   scale_size_manual(values = plot_grp_sz, name="Group Size") +
-        #   ggnewscale::new_scale("shape") +
-        #   ggnewscale::new_scale("fill") +
-        #   guides(alpha= "none",
-        #          shape=shp,
-        #          colour="none",
-        #          fill=fl,
-        #          size=guide_legend(direction = leg_dir))
+
+
         }else{
-          g <- g + geom_sf(data = ap_sf, shape = 21, alpha = set.alpha, colour=set.shape.outline.colour, stroke=0.1,
-                                aes(fill = Species, size = Count)) +#
+          # works for colour and shape and size!!
+          g <- g + geom_sf(data = ap_sf,
+                           # shape = 21,
+                           alpha = set.alpha, colour=set.shape.outline.colour, stroke=0.1,
+                           aes(fill = Species,
+                               shape = Species,
+                               size = Count)) +#
             scale_fill_manual(values = sgt_colours, breaks = sp,
-                              guide=guide_legend(title = NULL,
-                                                 legend.position = leg.pos2,
-                                                 ncol=1, order = 1, direction = leg_dir,
+                              guide=guide_legend(title = "Species",
+                                                 legend.position = leg.pos,
+                                                 ncol=ncols,
+                                                 order = 1, direction = leg_dir_spp,
                                                  override.aes = list(size=2.5)) )   +
-             # scale_shape_manual(values = shape, breaks = sp, name = NULL, guide=shp) +
+            scale_shape_manual(values = shape, breaks = sp,
+                               guide=guide_legend(title = "Species",
+                                                  legend.position = leg.pos,
+                                                  ncol=ncols,
+                                                  order = 1, direction = leg_dir_spp,
+                                                  override.aes = list(size=2.5))) +
             scale_size_manual(values = plot_grp_sz, name="Group Size") +
             ggnewscale::new_scale("shape") +
             ggnewscale::new_scale("fill") +
             guides(alpha= "none",
-                   # shape=shp,
+                   # shape= guide_legend(direction = leg_dir_spp),
                    colour="none",
-                   # fill=fl,
-                   size=guide_legend(direction = leg_dir))
+                   # fill= guide_legend(direction = leg_dir_spp),
+                   size=guide_legend(direction = leg_dir_sz))
         }
       }else{
         #################### NOT grp sz ##############################
+        # works for colour and shape
         if(is.null(specify_pt_size)) specify_pt_size <- 1
-        # g <-      g + geom_sf(data = ap_sf, alpha = set.alpha, colour="black",stroke=0.1,size=specify_pt_size,
-        #                       aes(fill = Species, shape = Species)) +#
-        #   # scale_size_manual(values = c(1,2,3), name="Group Size") +
-        #   scale_fill_manual(values = cols, breaks = sp, name = NULL, guide=fl )   +
-        #   scale_shape_manual(values = shape, breaks = sp, name = NULL, guide=shp) +
-        #   scale_size_manual(values = c(2), name="") +
-        #   ggnewscale::new_scale("shape") +
-        #   ggnewscale::new_scale("fill") +
-        #   guides(alpha= "none",
-        #          shape=shp,
-        #          colour="none",
-        #          fill=fl,
-        #          size="none")
-        g <- g + geom_sf(data = ap_sf, shape = 21, alpha = set.alpha, colour=set.shape.outline.colour, stroke=0.1, size=specify_pt_size,
+        g <- g + geom_sf(data = ap_sf, alpha = set.alpha, colour=set.shape.outline.colour, stroke=0.1, size=specify_pt_size,
                          aes(fill = Species, shape = Species)) +#
           scale_fill_manual(values = sgt_colours, breaks = sp, name = NULL,
                             guide=guide_legend(ncol=1, order = 1, direction = leg_dir,
                                                override.aes = list(size=2.5),title.position = "top") )   +
-          # scale_shape_manual(values = shape, breaks = sp, name = NULL, guide=shp) +
+          scale_shape_manual(values = shape, breaks = sp,
+                             guide=guide_legend(title = NULL,
+                                                legend.position = leg.pos2,
+                                                ncol=1, order = 1, direction = leg_dir,
+                                                override.aes = list(size=2.5))) +
           # scale_size_manual(values = plot_grp_sz, name="Group Size") +
           ggnewscale::new_scale("shape") +
           ggnewscale::new_scale("fill") +
@@ -709,7 +718,7 @@ if(!is.null(specify_pt_size)) ap_sf$Count <- as.factor(specify_pt_size)
       }
 
 
-    }
+    # }
     ###################################################################
     ###################################################################
   }
@@ -764,12 +773,13 @@ if(!is.null(specify_pt_size)) ap_sf$Count <- as.factor(specify_pt_size)
       legend.key.spacing.x=leg_key_spacing_x,
       legend.key.spacing.y=leg_key_spacing_y,
 
-      legend.direction = leg_dir,
+      # legend.direction = leg_dir,
       legend.box=leg_box,
       legend.box.background = element_rect(colour = "black", fill="white"),
 
       legend.text = element_text(size=label_size),#size=fig_legend_size
       # legend.title = element_text(margin = margin(b=0), size=label_size), #change legend title font size
+      legend.title.position = "top",
       legend.title = element_text(size=label_size), #change legend title font size
       legend.margin = margin(legend_margin),
       legend.background = element_blank(),
@@ -777,13 +787,13 @@ if(!is.null(specify_pt_size)) ap_sf$Count <- as.factor(specify_pt_size)
       legend.box.spacing = leg.box.spacing,
       legend.spacing.y = unit(0, 'mm'),
 
-      legend.key.size = leg_key_size,
-axis.text.x = element_text(angle=axis_angle,vjust=0.7, size=text_size),
-axis.text.y = element_text(angle=axis_angle, size=text_size),
+      # legend.key.size = leg_key_size,
+      axis.text.x = element_text(angle=axis_angle,vjust=0.7, size=text_size),
+      axis.text.y = element_text(angle=axis_angle, size=text_size),
     )
 
   if(!is.null(set_lat_scale)){
- g <- g + metR::scale_x_longitude(breaks = set_lat_scale)
+    g <- g + metR::scale_x_longitude(breaks = set_lat_scale)
   }
   if(!is.null(set_lon_scale)){
     g <- g +metR::scale_y_latitude(breaks = set_lon_scale)
@@ -791,8 +801,8 @@ axis.text.y = element_text(angle=axis_angle, size=text_size),
   if(leg.pos=="inside"){
     g <- g +
       theme(
-            legend.position.inside = legend_placement,
-            legend.justification =legend_justification      )
+        legend.position.inside = legend_placement,
+        legend.justification =legend_justification      )
   }
 
   if(!grid_label) g <- g+theme(axis.text.x = element_blank (),

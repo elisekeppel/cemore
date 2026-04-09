@@ -8,7 +8,7 @@ purrr::map to import data from all tracklines (mysticetus .csv files)
 from all days of a survey. Reads in survey trackline data (as .gpx from
 Bad Elf or .csv from Mysticetus) and formats as LINESTRING.}
 \usage{
-get_track(file_name, dir = NULL, year, month)
+get_track(file_name, dir = NULL, year, month, type = "csv")
 }
 \arguments{
 \item{file_name}{Name of gpx or csv trackline file}
