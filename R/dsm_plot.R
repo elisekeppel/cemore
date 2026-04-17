@@ -77,6 +77,7 @@ plot_pred <- function(mod,
                       # label=F,
                       # study_area = F,
                       # buffer = T,
+                      grid_for_ab = pg,
                       coast = coast_lr,
                       points = T,
                       obs = NULL){
@@ -118,9 +119,9 @@ plot_pred <- function(mod,
   if(!is.null(var)) p <- p + geom_sf(aes(fill = .data[[cv]]))
   # if(study_area) p <- p + geom_sf(data = study.area.can, fill = NA)
   # if(buffer)
-  p <- p + geom_sf(data = study.area, fill = NA) +
-    # if(points)
-    p + geom_sf(data = obs, aes(size = size), shape = 1, alpha = 0.9)
+  # p <- p + geom_sf(data = study.area, fill = NA) +
+    if(points)
+   p <-  p + geom_sf(data = obs, aes(size = size), shape = 1, alpha = 0.9)
 
   #########################################
   # Plot yearly
@@ -144,7 +145,7 @@ plot_pred <- function(mod,
   #########################################
   # if(label){
   # prep text
-  df <- summod(mod, newdata=data, forplot = T, abund = T) %>% as.data.frame()
+  df <- summod(mod, newdata=grid_for_ab, forplot = T, abund = T) %>% as.data.frame()
   df <- df[,c(1,3)]
   names(df) <- NULL
   dfnpc <- tibble(x=0.075, y=0.925, df = list(df))

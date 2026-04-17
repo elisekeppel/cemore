@@ -76,10 +76,19 @@ summod <- function(mod, newdata, off.set = newdata$off.set, abund = F, forplot =
     Linear.Terms <- paste(row.names(summ$pTerms.pv), collapse=", ")
     # df$p.linear <- paste(signif(summ$pTerms.pv, digits = 3), collapse=", ")
   }
+  if(mod$formula[[2]] == "count") {
+    df <- data.frame(
+      count   = sum(mod$data$count),
+      sgts = nrow(mod$data[which(mod$data$count>0),]))
+  }
 
-  df <- data.frame(
-    count   = sum(mod$data$count),
-    sgts = nrow(mod$data[which(mod$data$count>0),]),
+  if(mod$formula[[2]] == "abundance.est") {
+    df <- data.frame(
+      ddf.ab.est   = sum(mod$data$abundance.est),
+      sgts = nrow(mod$data[which(mod$data$abundance.est>0),]))
+  }
+
+  df <- df %>% mutate(
     # model   = mod.name,
     Family    = fam,
     # k       = k,
