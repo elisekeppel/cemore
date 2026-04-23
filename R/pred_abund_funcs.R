@@ -47,13 +47,13 @@
 # }
 
 # just updating the above version to paper format
-summod <- function(mod, newdata, off.set = newdata$off.set, abund = F, forplot = F){ # pred_by = NULL
+summod <- function(mod, newdata = predgrid.my, off.set = newdata$off.set, abund = T, forplot = F){ # pred_by = NULL
   # mod.name <- deparse(substitute(mod))
   summ     <- summary(mod, digits = 3)
-  # if(summ$family$family %like% "Negative Binomial") fam <- "nb"
-  # if(summ$family$family %like% "Tweedie") fam <- "tw"
+  if(summ$family$family %like% "Negative Binomial") fam <- "nb"
+  if(summ$family$family %like% "Tweedie") fam <- "tw"
 
-  fam <- summ$family$family
+  # fam <- summ$family$family
   # Calculate overdispersion factor
   E1   <- resid(mod, type = "pearson")
   N    <- nrow(mod$data)      # sample size
@@ -76,20 +76,21 @@ summod <- function(mod, newdata, off.set = newdata$off.set, abund = F, forplot =
     Linear.Terms <- paste(row.names(summ$pTerms.pv), collapse=", ")
     # df$p.linear <- paste(signif(summ$pTerms.pv, digits = 3), collapse=", ")
   }
-  if(mod$formula[[2]] == "count") {
-    df <- data.frame(
-      count   = sum(mod$data$count),
-      sgts = nrow(mod$data[which(mod$data$count>0),]))
-  }
+  # if(mod$formula[[2]] == "count") {
+  #   df <- data.frame(
+  #     count   = sum(mod$data$count),
+  #     sgts = nrow(mod$data[which(mod$data$count>0),]))
+  # }
 
-  if(mod$formula[[2]] == "abundance.est") {
-    df <- data.frame(
-      ddf.ab.est   = sum(mod$data$abundance.est),
-      sgts = nrow(mod$data[which(mod$data$abundance.est>0),]))
-  }
+  # if(mod$formula[[2]] == "abundance.est") {
+  #   df <- data.frame(
+  #     ddf.ab.est   = sum(mod$data$abundance.est),
+  #     sgts = nrow(mod$data[which(mod$data$abundance.est>0),]))
+  # }
 
-  df <- df %>% mutate(
-    # model   = mod.name,
+  # df <- df %>% mutate(
+    df <- data.frame(
+      # model   = mod.name,
     Family    = fam,
     # k       = k,
     # smooth  = paste(rownames(summ$s.table), collapse=", "),
@@ -119,6 +120,12 @@ summod <- function(mod, newdata, off.set = newdata$off.set, abund = F, forplot =
 }
 
 
+quick.sum <- function(mod, names){
+  res <- summary(mod)$s.table %>% data.frame()
+  res %>% mutate(model = rep(names, nrow(res)),
+                 AIC = rep(AIC(mod), nrow(res)))
+}
+
 summarize_dsm2 <- function(model){
 
   summ <- summary(model)
@@ -141,45 +148,45 @@ summarize_dsm2 <- function(model){
   return(dat)
 }
 
-modsums <- function(mod_list, newdata, off.set = newdata$off.set, abund = T, pred_by = F) {
-  print(paste("not working - use ab_sum_pred_by() instead"))
-  # if(any(class(mod_list) == "list")){
-  #   names <- names(mod_list)
-  # }else{
-  #   names <- deparse(substitute(mod_list))
-  #   mod_list <- lst(mod_list)
-  # }
-  #
-  # res <- purrr::map_df(mod_list, summod, newdata = newdata, off.set = newdata$off.set, abund = abund, pred_by = pred_by)#, abund
-  # n <- names(res)
-  # res$model <- names
-  # res %<>% select(model, n)
-  # if(unique(res$model %like% "mod")) res$model <- NULL
-  # res %<>% arrange(dist, AIC)
-  #
-  # # if(abund){
-  # #   ab <- purrr::map_df(mod_list, pred.ab, newdata = newdata, off.set = newdata$off.set)
-  # #   ab$model <- names
-  # #   if(unique(ab$model %like% "mod")) ab$model <- NULL
-  # #   res <- inner_join(res, ab)
-  # # }
-  # res
-  # # }
-}
+# modsums <- function(mod_list, newdata, off.set = newdata$off.set, abund = T, pred_by = F) {
+#   print(paste("not working - use ab_sum_pred_by() instead"))
+#   # if(any(class(mod_list) == "list")){
+#   #   names <- names(mod_list)
+#   # }else{
+#   #   names <- deparse(substitute(mod_list))
+#   #   mod_list <- lst(mod_list)
+#   # }
+#   #
+#   # res <- purrr::map_df(mod_list, summod, newdata = newdata, off.set = newdata$off.set, abund = abund, pred_by = pred_by)#, abund
+#   # n <- names(res)
+#   # res$model <- names
+#   # res %<>% select(model, n)
+#   # if(unique(res$model %like% "mod")) res$model <- NULL
+#   # res %<>% arrange(dist, AIC)
+#   #
+#   # # if(abund){
+#   # #   ab <- purrr::map_df(mod_list, pred.ab, newdata = newdata, off.set = newdata$off.set)
+#   # #   ab$model <- names
+#   # #   if(unique(ab$model %like% "mod")) ab$model <- NULL
+#   # #   res <- inner_join(res, ab)
+#   # # }
+#   # res
+#   # # }
+# }
 
 #############################################################################
-pred.ab <- function(mod, newdata, off.set = newdata$off.set) {
-  # print("Note: input is required to be a named list created with lst()" if you want names output when used with purrr::map)
-  # newdata$monthYear <- newdata$monthYear %>% droplevels()
-
-  model <- deparse(substitute(mod))
-  pred <-  round(sum(predict(mod, newdata = newdata, off.set=newdata$off.set), na.rm = T), digits=0)
-  data.frame(model, pred)
-}
+# pred.ab <- function(mod, newdata, off.set = newdata$off.set) {
+#   # print("Note: input is required to be a named list created with lst()" if you want names output when used with purrr::map)
+#   # newdata$monthYear <- newdata$monthYear %>% droplevels()
+#
+#   model <- deparse(substitute(mod))
+#   pred <-  round(sum(predict(mod, newdata = newdata, off.set=newdata$off.set), na.rm = T), digits=0)
+#   data.frame(model, pred)
+# }
 
 
 ab_sum_pred_by <- function(mod_list, abund = T, newdata = NULL){ # pred_by = NULL, res="sum")
-  cat("make sure model list is prepped using lst() not c() or list())")
+  cat("Takes a list of dsms\n\n  ***Make sure model list is prepped using lst() not c() or list())")
   if(any(class(mod_list) == "list")){
     names <- names(mod_list)
   }else{

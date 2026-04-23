@@ -1,7 +1,7 @@
 # new functions created to assist model comparison and plotting when running dsms
 
 ####################################################
-# build a model name from model objec
+# build a model name from model object
 ####################################################
 
 get_mod_name <- function(mod){
@@ -51,7 +51,7 @@ pred_ab_spt <- function(mod, newdata,
   #     mean.2023 = rowMeans(across(c(names(data)[which(names(data) %like% "2023")]))),
   #     pred   = rowMeans(across(my)))
     model <- deparse(substitute(mod))
-    pred  <- round(sum(widedata$pred))
+    pred  <- round(sum(widedata$pred, na.rm = T))
     cat(paste(model, "abund est =", pred))
   if(res == "sum"){
     res <- data.frame(model, pred)
